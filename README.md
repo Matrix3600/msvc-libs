@@ -182,7 +182,7 @@ If you use a makefile:
 	# C Compiler
 	export INCLUDE = $(MSVC_CRT_PATH)/include;$(MSVC_SDK_INCLUDE_PATH)/ucrt;$\
 		$(MSVC_SDK_INCLUDE_PATH)/um;$(MSVC_SDK_INCLUDE_PATH)/shared
-	export CL = -Wno-microsoft-anon-tag -Wno-pragma-pack -Wno-unknown-pragmas
+	export CL = -Wno-microsoft-anon-tag -Wno-pragma-pack -Wno-unknown-pragmas \
 		-Wno-ignored-pragma-intrinsic
 
 	# Linker
