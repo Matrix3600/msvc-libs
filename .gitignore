@@ -1,0 +1,8 @@
+*.cab
+*.dll
+*.exe
+*.iso
+*.lib
+*.o
+*.out
+*.res

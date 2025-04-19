@@ -1,0 +1,9 @@
+# Set default behavior to automatically normalize line endings.
+* text=auto
+
+# Windows script files must have crlf line endings to avoid strange behaviour.
+*.cmd text eol=crlf
+
+# Files and directories with this attribute won't be added to archive files
+.gitattributes export-ignore
+.gitignore     export-ignore
