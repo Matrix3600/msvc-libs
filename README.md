@@ -9,10 +9,11 @@ They run on Windows or Linux.
 The standalone MSVC/SDK library is useful for compiling projects on Linux 
 targeting Windows.
 
-It can be used also on Windows, without the need to have Visual Studio installed.
+It can also be used on Windows, without the need to have Visual Studio
+installed.
 
-Note the Visual Studio library isn't redistributable, so the repackaged version
-isn't either.
+Note that the Visual Studio library is not redistributable, so neither is the
+repackaged version.
 
 
 Why
@@ -24,16 +25,13 @@ binaries (*-pc-windows-msvc).
 This is not the case with executables created with GNU or MinGW based tools
 (*-windows-gnu or *-mingw64-gnu).
 
-This is especially useful when cross-compiling on Linux, where Visual Studio is
-not available.
+The library is compatible with toolchains like the free software LLVM,
+including a modern and flexible compiler (Clang) that often produces
+smaller executables than GCC or Visual Studio.
 
-The library is compatible with toolchains like the free software LLVM, including
-a modern and flexible compiler (Clang) that often produces smaller executables
-than GCC or Visual Studio.
-
-On case-sensitive systems like Linux, filenames must always be identical.
-Mixing case can cause endless problems, so it's best to use all-lowercase
-filenames.
+Every file of the library must be referenced everywhere by an identical name.
+On case-sensitive systems like Linux, mixing case can cause endless problems,
+so it's best to use all-lowercase filenames.
 
 The Visual Studio library was designed for Windows, so it didn't take this into
 account; the filenames have a mix of lower and upper case letters, sometimes
@@ -62,8 +60,8 @@ Otherwise, the original files are downloadable from the Microsoft servers. You
 need to accept the [license](
 https://visualstudio.microsoft.com/en/license-terms/vs2022-ga-community/).
 
-You can use a Python script in the [msvc-wine](https://github.com/mstorsjo/msvc-wine)
-github repository to download the files.
+You can use a Python script in the [msvc-wine](
+https://github.com/mstorsjo/msvc-wine) github repository to download the files.
 
 Only the file `vsdownload.py` is needed. Python must be installed.
 
@@ -104,10 +102,12 @@ There are two possibilities:
 
 - Visual Studio is installed.  
 The script attempts to detect the Visual Studio installation directory,
-but it may not work for you.
-In this case, you can:
-  * Either specify this installation directory in the variable at the beginning of the script;
-  * Either open the "_Developer Command Prompt for VS_" via the Start menu shortcut. The necessary environment variables will then be set automatically.
+but it may not work for you. In this case, you can:
+
+  * Either specify this installation directory in the variable at the beginning
+  of the script;
+  * Either open the "_Developer Command Prompt for VS_" via the Start menu
+  shortcut. It sets the necessary environment variables automatically.
 
 - Visual Studio is not installed.  
 If you downloaded the files as shown above, simply place the script and its 
@@ -115,8 +115,8 @@ configuration file in the download directory.
 Otherwise, you must specify the path and version of the tools (MSVC and SDK)
 in the variables at the beginning of the script.
 
-Choose the script that matches your system (Windows or Linux).
-The configuration file should be next to the script.
+Choose the `make_msvc-libs` script (`.cmd` or `.sh`) that matches your system
+(Windows or Linux). The configuration file should be next to the script.
 
 Then run (you can also double-click on the script):
 
@@ -137,8 +137,7 @@ Using the MSVC-Libs library
 ---------------------------
 
 ### LLVM toolchain
-It can be used for example by the LLVM toolchain, available for free on all
-platforms.
+You can use the LLVM toolchain, available for free on all platforms.
 
 Go to <https://github.com/llvm/llvm-project/releases> and download the latest
 file that matches your __development__ system's architecture, for example:  
@@ -158,7 +157,7 @@ file that matches your __development__ system's architecture, for example:
 Extract its contents to a folder, and add its `bin` subdirectory to your PATH.
 
 
-### LLVM Compiler and Linker in MSVC mode
+### LLVM compiler and linker in MSVC mode
 
 The names of the tools in MSVC mode are `clang-cl` for the C compiler and 
 `lld-link` for the linker.
@@ -199,8 +198,10 @@ If you use a shell script:
 	MSVC_SDK_LIB_PATH="$MSVC_LIBS_PATH/sdk/lib"
 
 	# C Compiler
-	export INCLUDE="$MSVC_CRT_PATH/include;$MSVC_SDK_INCLUDE_PATH/ucrt;$MSVC_SDK_INCLUDE_PATH/um;$MSVC_SDK_INCLUDE_PATH/shared"
-	export CL="-Wno-microsoft-anon-tag -Wno-pragma-pack -Wno-unknown-pragmas -Wno-ignored-pragma-intrinsic"
+	export INCLUDE="$MSVC_CRT_PATH/include;$MSVC_SDK_INCLUDE_PATH/ucrt"
+	INCLUDE+=";$MSVC_SDK_INCLUDE_PATH/um;$MSVC_SDK_INCLUDE_PATH/shared"
+	export CL="-Wno-microsoft-anon-tag -Wno-pragma-pack -Wno-unknown-pragmas"
+	CL+=" -Wno-ignored-pragma-intrinsic"
 
 	# Linker
 	# For x86
@@ -208,9 +209,9 @@ If you use a shell script:
 	# For x64
 	export LIB="$MSVC_CRT_PATH/lib/x64;$MSVC_SDK_LIB_PATH/um/x64"
 
-The `INCLUDE` variable contains the search paths for the header files used by
+The `INCLUDE` variable contains the search paths of the header files used by
 the compiler, separated by semicolons.  
-The `LIB` variable contains the search paths for the libraries used by the
+The `LIB` variable contains the search paths of the libraries used by the
 linker, separated by semicolons.  
 The `CL` variable contains compiler options. These options may be useful to
 hide certain warning messages.
