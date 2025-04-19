@@ -51,33 +51,19 @@ The scripts copy the Visual Studio library files, then make some adjustments:
 - Include directives are modified accordingly to include lowercase filenames.
 
 
+
 Requirements
 ------------
 
 If Visual Studio is installed, the scripts are immediately usable.
 
-Otherwise, the original files are downloadable from the Microsoft servers. You
-need to accept the [license](
-https://visualstudio.microsoft.com/en/license-terms/vs2022-ga-community/).
+Otherwise, the original files are downloadable from the Microsoft servers.
 
-You can use a Python script in the [msvc-wine](
-https://github.com/mstorsjo/msvc-wine) github repository to download the files.
+Follow these [instructions](/download_vslib.md) to download the Visual Studio
+MSVC/SDK library.
 
-Only the file `vsdownload.py` is needed. Python must be installed.
-
-Open a terminal and run:
-
-	# On Linux:
-	./vsdownload.py --dest "<download_directory>"
-	
-	:: On Windows:
-	vsdownload.py --dest "<download_directory>"
-
-where `<download_directory>` is the directory where you want to put the
-downloaded files.
-
-After creating the library, you can delete the download directory and its
-contents.
+Later, after creating the standalone library, you will be able to delete the
+download directory and its contents.
 
 
 
