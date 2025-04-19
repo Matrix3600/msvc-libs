@@ -136,6 +136,7 @@ variable to it to use it.
 Using the MSVC-Libs library
 ---------------------------
 
+### LLVM toolchain
 It can be used for example by the LLVM toolchain, available for free on all
 platforms.
 
@@ -157,5 +158,59 @@ file that matches your __development__ system's architecture, for example:
 Extract its contents to a folder, and add its `bin` subdirectory to your PATH.
 
 
+### LLVM Compiler and Linker in MSVC mode
+
+The names of the tools in MSVC mode are `clang-cl` for the C compiler and 
+`lld-link` for the linker.
+
+`clang-cl` is identical to `clang --driver-mode=cl`.
+Use one or the other depending on their availability in your toolchain.
 
 
+### Environment variables
+
+To avoid having to specify the headers and libraries paths each time you use
+the compiler and linker, it is recommended to set the environment variables
+used by them.
+
+If you use a makefile:
+
+	MSVC_CRT_PATH = $(MSVC_LIBS_PATH)/crt
+	MSVC_SDK_INCLUDE_PATH = $(MSVC_LIBS_PATH)/sdk/include
+	MSVC_SDK_LIB_PATH = $(MSVC_LIBS_PATH)/sdk/lib
+
+	# C Compiler
+	export INCLUDE = $(MSVC_CRT_PATH)/include;$(MSVC_SDK_INCLUDE_PATH)/ucrt;$\
+		$(MSVC_SDK_INCLUDE_PATH)/um;$(MSVC_SDK_INCLUDE_PATH)/shared
+	export CL = -Wno-microsoft-anon-tag -Wno-pragma-pack -Wno-unknown-pragmas
+		-Wno-ignored-pragma-intrinsic
+
+	# Linker
+	# For x86
+	export LIB = $(MSVC_CRT_PATH)/lib/x86;$(MSVC_SDK_LIB_PATH)/um/x86
+	# For x64
+	export LIB = $(MSVC_CRT_PATH)/lib/x64;$(MSVC_SDK_LIB_PATH)/um/x64
+
+
+If you use a shell script:
+
+	MSVC_CRT_PATH="$MSVC_LIBS_PATH/crt"
+	MSVC_SDK_INCLUDE_PATH="$MSVC_LIBS_PATH/sdk/include"
+	MSVC_SDK_LIB_PATH="$MSVC_LIBS_PATH/sdk/lib"
+
+	# C Compiler
+	export INCLUDE="$MSVC_CRT_PATH/include;$MSVC_SDK_INCLUDE_PATH/ucrt;$MSVC_SDK_INCLUDE_PATH/um;$MSVC_SDK_INCLUDE_PATH/shared"
+	export CL="-Wno-microsoft-anon-tag -Wno-pragma-pack -Wno-unknown-pragmas -Wno-ignored-pragma-intrinsic"
+
+	# Linker
+	# For x86
+	export LIB="$MSVC_CRT_PATH/lib/x86;$MSVC_SDK_LIB_PATH/um/x86"
+	# For x64
+	export LIB="$MSVC_CRT_PATH/lib/x64;$MSVC_SDK_LIB_PATH/um/x64"
+
+The `INCLUDE` variable contains the search paths for the header files used by
+the compiler, separated by semicolons.  
+The `LIB` variable contains the search paths for the libraries used by the
+linker, separated by semicolons.  
+The `CL` variable contains compiler options. These options may be useful to
+hide certain warning messages.
