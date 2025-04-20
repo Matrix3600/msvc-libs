@@ -148,8 +148,13 @@ Extract its contents to a folder, and add its `bin` subdirectory to your PATH.
 The names of the tools in MSVC mode are `clang-cl` for the C compiler and 
 `lld-link` for the linker.
 
-`clang-cl` is identical to `clang --driver-mode=cl`.
-Use one or the other depending on their availability in your toolchain.
+`clang-cl` is equivalent to `clang --driver-mode=cl`.
+`lld-link` is equivalent to `lld -flavor link`.
+
+If clang-cl or lld-link are not available, but the clang or lld binaries are 
+available, you can copy them or create a symbolic link under the name clang-cl
+or lld-link. The binaries are identical, but their behaviour depends on their
+names.
 
 
 ### Environment variables
