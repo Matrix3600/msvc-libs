@@ -46,7 +46,10 @@ if [ ! -f "$scriptdir/$config_file" ]; then
 fi
 
 search_path
-if [ $? != 0 ]; then error_path; fi
+if [ $? != 0 ]; then
+	echo "The Visual Studio library could not be found."
+	exit_script 3
+fi
 
 MSVC_CRT_PATH=$VCToolsInstallDir
 MSVC_SDK_INCLUDE_PATH="$WindowsSdkDir/Include/$WindowsSDKVersion"
@@ -93,7 +96,7 @@ do
 	((linenum++))
 	line=${line%%#*}	# Remove comments
 	line=$(trim "$line")
-	if [[ -n $line ]]; then
+	if [ -n "$line" ]; then
 		IFS="|" read -r opt type source <<< "$line"
 		opt=$(trim "$opt")
 		type=$(trim "$type")
@@ -101,7 +104,7 @@ do
 
 		sourcedir=""
 		destdir=""
-		
+
 		case $type in
 		CRT)
 			sourcedir=$MSVC_CRT_PATH
@@ -132,9 +135,9 @@ do
 		source=${source%/}	# Remove trailing /
 		if [ "$source" = "." ]; then source=""; fi
 		if [ -n "$source" ]; then source="/${source//..}"; fi	# Remove ..
-		
+
 		echo Copying "[$type]$source$subdirs" to "$destdir$source" ...
-		
+
 		mkdir -p "$destdir$source"
 		if [ $? != 0 ]; then error_copy; fi
 
@@ -148,7 +151,7 @@ do
 				done
 		fi
 		if [ $? != 0 ]; then error_copy; fi
-	fi	
+	fi
 done 3<"$scriptdir/$config_file"
 
 
@@ -165,13 +168,15 @@ rename_file() {
 		t=${1%/*}/$nn
 		if [ "$n" != "$nn" ]; then
 			mv -f "$1" "$t" && echo "Renamed '${1#./}' as '$nn'"
-		fi	
-	fi	
+		fi
+	fi
 }
 
 find . -depth -print0 | while IFS= read -r -d '' file; do
 	rename_file "$file"
+	if [ $? != 0 ]; then return 1; fi
 done
+if [ $? != 0 ]; then error_rename_files; fi
 
 
 #
@@ -180,8 +185,10 @@ done
 
 function rename_includes()
 {
-	find "$1" -type f -exec sed -i -b -e 's/\(#include\s*[<"]\)\([^">]*\)\([>"]\)/\1\L\2\3/g' '{}' \;
-	return 0
+	find "$1" -type f -print0 | while IFS= read -r -d '' file; do
+		sed -i -b -e 's/\(#include\s*[<"]\)\([^">]*\)\([>"]\)/\1\L\2\3/g' "$file"
+		if [ $? != 0 ]; then return 1; fi
+	done
 }
 
 crtIncludeDirectory="crt/include"
@@ -193,20 +200,20 @@ echo
 if [ -d "$crtIncludeDirectory" ]; then
 	echo; echo "Processing CRT include directory ..."; echo
 	rename_includes "$crtIncludeDirectory"
+	if [ $? != 0 ]; then error_rename_includes; fi
 fi
-if [ $? != 0 ]; then exit_script 10; fi
 
 if [ -d "$crtAtlMfcIncludeDirectory" ]; then
 	echo; echo "Processing CRT AtlMfc include directory ..."; echo
 	rename_includes "$crtAtlMfcIncludeDirectory"
+	if [ $? != 0 ]; then error_rename_includes; fi
 fi
-if [ $? != 0 ]; then exit_script 10; fi
 
 if [ -d "$sdkIncludeDirectory" ]; then
 	echo; echo "Processing SDK include directory ..."; echo
 	rename_includes "$sdkIncludeDirectory"
+	if [ $? != 0 ]; then error_rename_includes; fi
 fi
-if [ $? != 0 ]; then exit_script 10; fi
 
 echo
 echo "Done."
@@ -220,7 +227,7 @@ echo "MSVC_LIBS_PATH environment variable to it to use it."
 search_path() {
 	if [ -n "$VCToolsInstallDir" ] && [ -n "$WindowsSdkDir" ] && \
 			[ -n "$WindowsSDKVersion" ]; then
-		# Remove trailing /	
+		# Remove trailing /
 		VCToolsInstallDir=${VCToolsInstallDir%/}
 		WindowsSdkDir=${WindowsSdkDir%/}
 		WindowsSDKVersion=${WindowsSDKVersion%/}
@@ -246,9 +253,9 @@ search_path() {
 		if [ -z "$version" ]; then return 1; fi
 		WindowsSDKVersion=$version
 
-		return 0	
+		return 0
 	fi
-	
+
 	return 1
 }
 
@@ -259,16 +266,22 @@ error_config() {
 	exit_script 2
 }
 
-error_path() {
-	echo
-	echo "The Visual Studio library could not be found."
-	exit_script 3
-}
-
 error_copy() {
 	echo
 	echo "ERROR: Copying files failed."
 	exit_script 4
+}
+
+error_rename_files() {
+	echo
+	echo "ERROR: Renaming of files failed."
+	exit_script 5
+}
+
+error_rename_includes() {
+	echo
+	echo "ERROR: Renaming of includes failed."
+	exit_script 6
 }
 
 exit_script() {

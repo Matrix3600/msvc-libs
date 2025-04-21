@@ -80,7 +80,8 @@ echo(
 echo The directory "%msvc_dirname%" will be created in
 echo %scriptdir% .
 echo(
-pause
+echo Press any key to continue...
+pause >nul
 echo(
 
 mkdir "%msvc_dirpath%
@@ -150,24 +151,20 @@ set args=%args:"=\"%
 set args=%args:'=''%
 
 "%pwsh_exec%" -c ^"Invoke-Expression ('^& {' + [io.file]::ReadAllText(\"%~f0\") + '} %args%')"
+set "exit_code=%errorlevel%"
+if %exit_code% neq 0 goto end
 
-if %errorlevel% equ 0 (
-	echo(
-	echo Done.
-	echo(
-	echo Move the "%msvc_dirname%" directory to the final location and set the
-	echo MSVC_LIBS_PATH environment variable to it to use it.
-) else (
-	echo(
-	echo ERROR: The renaming of the files failed.
-	set "exit_code=5"
-	goto end
-)
+echo(
+echo Done.
+echo(
+echo Move the "%msvc_dirname%" directory to the final location and set the
+echo MSVC_LIBS_PATH environment variable to it to use it.
 
 :end
 if defined interactive (
 	echo(
-	pause
+	echo Press any key to exit...
+	pause >nul
 )
 exit /b %exit_code%
 
@@ -285,7 +282,9 @@ param (
 )
 #>
 
-if ($Args.Length -ne 2) { exit 1 }
+$ErrorActionPreference = 'Stop'
+
+if ($Args.Length -ne 2) { exit 20 }
 $rootDirectory = $Args[0]
 $powerShellVersion = $Args[1]
 
@@ -295,17 +294,25 @@ Write-Host
 #
 # Rename all files and subdirectories to lowercase.
 #
+try {
+	Get-ChildItem -LiteralPath $rootDirectory -Recurse |
+			Where { $_.Name -cne $_.Name.ToLower() } |
+			Sort-Object | ForEach-Object {
+		$tn = "$($_.Name)-temp"
+		$tfn = "$($_.FullName)-temp"
+		$nn = $_.Name.ToLower()
+		Rename-Item -LiteralPath $_.FullName -NewName $tn
+		Rename-Item -LiteralPath $tfn -NewName $nn -Force
 
-Get-ChildItem -LiteralPath $rootDirectory -Recurse |
-Where { $_.Name -cne $_.Name.ToLower() } | ForEach-Object {
-	$tn = "$($_.Name)-temp"
-	$tfn = "$($_.FullName)-temp"
-	$nn = $_.Name.ToLower()
-	Rename-Item -LiteralPath $_.FullName -NewName $tn
-	Rename-Item -LiteralPath $tfn -NewName $nn -Force
-
-	$relFilename = $_.FullName.Replace( "$($rootDirectory)\", '' )
-	Write-Host "Renamed '$($relFilename)' as '$($nn)'"
+		$relFilename = $_.FullName.Replace( "$($rootDirectory)\", '' )
+		Write-Host "Renamed '$($relFilename)' as '$($nn)'"
+	}
+}
+catch {
+	Write-Host $_
+	Write-Host
+	Write-Host "ERROR: Renaming of files failed."
+	exit 5
 }
 
 
@@ -349,20 +356,28 @@ $crtIncludeDirectory = $rootDirectory + '\crt\include'
 $crtAtlMfcIncludeDirectory = $rootDirectory + '\crt\atlmfc\include'
 $sdkIncludeDirectory = $rootDirectory + '\sdk\include'
 
-if (Test-Path -path $crtIncludeDirectory) {
-	Write-Host "`nProcessing CRT include directory ...`n"
-	Get-ChildItem -LiteralPath $crtIncludeDirectory -Recurse | Sort-Object |
-		ForEach-Object { ProcessIncludeFile( $_ ) }
+try {
+	if (Test-Path -path $crtIncludeDirectory) {
+		Write-Host "`nProcessing CRT include directory ...`n"
+		Get-ChildItem -LiteralPath $crtIncludeDirectory -Recurse | Sort-Object |
+			ForEach-Object { ProcessIncludeFile( $_ ) }
+	}
+	if (Test-Path -path $crtAtlMfcIncludeDirectory) {
+		Write-Host "`nProcessing CRT AtlMfc include directory ...`n"
+		Get-ChildItem -LiteralPath $crtAtlMfcIncludeDirectory -Recurse | Sort-Object |
+			ForEach-Object { ProcessIncludeFile( $_ ) }
+	}
+	if (Test-Path -path $sdkIncludeDirectory) {
+		Write-Host "`nProcessing SDK include directory ...`n"
+		Get-ChildItem -LiteralPath $sdkIncludeDirectory -Recurse | Sort-Object |
+			ForEach-Object { ProcessIncludeFile( $_ ) }
+	}
 }
-if (Test-Path -path $crtAtlMfcIncludeDirectory) {
-	Write-Host "`nProcessing CRT AtlMfc include directory ...`n"
-	Get-ChildItem -LiteralPath $crtAtlMfcIncludeDirectory -Recurse | Sort-Object |
-		ForEach-Object { ProcessIncludeFile( $_ ) }
-}
-if (Test-Path -path $sdkIncludeDirectory) {
-	Write-Host "`nProcessing SDK include directory ...`n"
-	Get-ChildItem -LiteralPath $sdkIncludeDirectory -Recurse | Sort-Object |
-		ForEach-Object { ProcessIncludeFile( $_ ) }
+catch {
+	Write-Host $_
+	Write-Host
+	Write-Host "ERROR: Renaming of includes failed."
+	exit 6
 }
 
 exit 0
