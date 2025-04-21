@@ -3,7 +3,7 @@ Download the Visual Studio MSVC/SDK library
 
 The original files are downloadable from the Microsoft servers. You
 need to accept the [license](
-https://visualstudio.microsoft.com/en/license-terms/vs2022-ga-community/).
+https://go.microsoft.com/fwlink/?LinkId=2179911).
 
 You can use a Python script in the [msvc-wine](
 https://github.com/mstorsjo/msvc-wine) github repository to download the files.
