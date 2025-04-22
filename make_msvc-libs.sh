@@ -287,6 +287,7 @@ error_rename_includes() {
 exit_script() {
 	if $interactive; then
 		echo
+		read -d '' -t1
 		read -rsn1 -p "Press any key to exit..."
 		echo
 	fi
