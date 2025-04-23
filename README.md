@@ -59,7 +59,7 @@ If Visual Studio is installed, the scripts are immediately usable.
 
 Otherwise, the original files are downloadable from the Microsoft servers.
 
-Follow these [instructions](/download_vslib.md) to download the Visual Studio
+Follow these [instructions](/download/download_vslib.md) to download the Visual Studio
 MSVC/SDK library.
 
 Later, after creating the standalone library, you will be able to delete the
