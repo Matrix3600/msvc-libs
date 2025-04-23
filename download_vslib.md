@@ -27,4 +27,6 @@ Then open a terminal and run:
 where `<download_directory>` is the directory where you want to put the
 downloaded files.
 
-Choose a directory whose path __does not contain spaces__ or special characters.
+On Windows, choose a directory with a __short path__ (less than 35 characters),
+otherwise the extraction will fail. On Linux, there doesn't seem to be any
+problem.
