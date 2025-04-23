@@ -7,7 +7,7 @@
 ::
 :: Build the repackaged MSVC/SDK headers and libraries.
 ::
-:: Compatible with Linux for cross-compilation.
+:: Compatible with Windows and Linux for cross-compilation.
 ::
 :: - Rename the files and directories to lowercase for compatibility
 ::   with case-sensitive systems (Linux).
@@ -32,16 +32,45 @@ set "interactive="
 echo %cmdcmdline%| find /i "%~0" >nul
 if not errorlevel 1 set "interactive=1"
 
-set "scriptdir=%~dp0"
-if "%scriptdir:~-1%"=="\" set "scriptdir=%scriptdir:~0,-1%"
+set "opt_quiet=0"
 
-cd /d "%scriptdir%"
+for %%a in (%*) do (
+	call :parse_arg "%%~a"
+	if errorlevel 1 (
+		set "exit_code=1"
+		goto end
+	)
+)
+goto args_end
+
+:parse_arg
+set "arg=%~1"
+if not "%arg:~0,1%"=="/" if not "%arg:~0,1%"=="-" goto argument
+set "opt=%arg:~1%"
+if "%opt%"=="" goto argument
+if "%opt%"=="q" (set "opt_quiet=1"
+) else (
+	echo ERROR: Invalid option %opt%.
+	exit /b 1
+)
+exit /b 0
+
+:argument
+echo ERROR: Invalid argument.
+exit /b 1
+
+:args_end
+
+set "script_dir=%~dp0"
+if "%script_dir:~-1%"=="\" set "script_dir=%script_dir:~0,-1%"
+
+cd /d "%script_dir%"
 if errorlevel 1 set "exit_code=10" & goto end
 
 echo(
 
-if not exist "%scriptdir%\%config_file%" (
-	echo Configuration file not found: "%config_file%" .
+if not exist "%script_dir%\%config_file%" (
+	echo ERROR: Configuration file not found: "%config_file%" .
 	set "exit_code=2"
 	goto end
 )
@@ -65,7 +94,7 @@ if not exist "%MSVC_SDK_INCLUDE_PATH%\um\windows.h" (
 	goto end
 )
 
-set "msvc_dirpath=%scriptdir%\%msvc_dirname%"
+set "msvc_dirpath=%script_dir%\%msvc_dirname%"
 
 if exist "%msvc_dirpath%" (
 	echo The "%msvc_dirname%" directory already exists.
@@ -78,10 +107,13 @@ echo This script creates a repackaged standalone MSVC/SDK library from the
 echo Visual Studio library.
 echo(
 echo The directory "%msvc_dirname%" will be created in
-echo %scriptdir% .
-echo(
-echo Press any key to continue...
-pause >nul
+echo %script_dir% .
+
+if "%opt_quiet%"=="0" (
+	echo(
+	echo Press any key to continue...
+	pause >nul
+)
 echo(
 
 mkdir "%msvc_dirpath%
@@ -95,12 +127,12 @@ setlocal EnableDelayedExpansion
 set "linenum=0"
 
 for /f "tokens=1-3 usebackq eol=# delims=|" %%i in (
-		"%scriptdir%\%config_file%") do (
+		"%script_dir%\%config_file%") do (
 	set /a linenum += 1
-	set "opt=%%~i"
+	set "recurs=%%~i"
 	set "type=%%~j"
 	set "source=%%~k"
-	call :trim opt & call :trim type & call :trim source
+	call :trim recurs & call :trim type & call :trim source
 
 	set "sourcedir="
 	set "destdir="
@@ -115,11 +147,11 @@ for /f "tokens=1-3 usebackq eol=# delims=|" %%i in (
 		set "destdir=sdk\lib"
 	) else goto error_config
 
-	if "!opt!"=="0" (
-		set "options="
+	if "!recurs!"=="0" (
+		set "copy_opt="
 		set "subdirs="
-	) else if "!opt!"=="1" (
-		set "options=s"
+	) else if "!recurs!"=="1" (
+		set "copy_opt=s"
 		set "subdirs=\*"
 	) else goto error_config
 
@@ -130,7 +162,7 @@ for /f "tokens=1-3 usebackq eol=# delims=|" %%i in (
 	if "!source!" neq "" set "source=\!source:..=!"
 	set "dest=!destdir!!source!"
 	call echo Copying "[!type!]!source!!subdirs!" to "!dest!" ...
-	call xcopy /qy!options! "!sourcedir!!source!\*" "!dest!\"
+	call xcopy /qy!copy_opt! "!sourcedir!!source!\*" "!dest!\"
 	if errorlevel 1 goto error_copy
 )
 
@@ -150,7 +182,8 @@ set args="%msvc_dirpath%" "%pwsh_version%"
 set args=%args:"=\"%
 set args=%args:'=''%
 
-"%pwsh_exec%" -c ^"Invoke-Expression ('^& {' + [io.file]::ReadAllText(\"%~f0\") + '} %args%')"
+"%pwsh_exec%" -c ^"Invoke-Expression ('^& {' + ^
+	[io.file]::ReadAllText(\"%~f0\") + '} %args%')"
 set "exit_code=%errorlevel%"
 if %exit_code% neq 0 goto end
 
@@ -161,7 +194,7 @@ echo Move the "%msvc_dirname%" directory to the final location and set the
 echo MSVC_LIBS_PATH environment variable to it to use it.
 
 :end
-if defined interactive (
+if "%opt_quiet%"=="0" if defined interactive (
 	echo(
 	echo Press any key to exit...
 	pause >nul
@@ -186,11 +219,11 @@ if not exist "VC\Tools\MSVC\" goto search_path_3
 set "version="
 for /f %%i in ('dir VC\Tools\MSVC /b/a:d') do set "version=%%i"
 if "%version%"=="" goto search_path_3
-set "VCToolsInstallDir=%scriptdir%\VC\Tools\MSVC\%version%"
+set "VCToolsInstallDir=%script_dir%\VC\Tools\MSVC\%version%"
 set "version="
 for /f %%i in ('dir "Windows Kits" /b/a:d') do set "version=%%i"
 if "%version%"=="" goto search_path_3
-set "WindowsSdkDir=%scriptdir%\Windows Kits\%version%"
+set "WindowsSdkDir=%script_dir%\Windows Kits\%version%"
 set "version="
 for /f %%i in ('dir "%WindowsSdkDir%\Include" /b/a:d') do set "version=%%i"
 if "%version%"=="" goto search_path_3

@@ -7,7 +7,7 @@
 #
 # Build the repackaged MSVC/SDK headers and libraries.
 #
-# Compatible with Linux for cross-compilation.
+# Compatible with Windows and Linux for cross-compilation.
 #
 # - Rename the files and directories to lowercase for compatibility
 #   with case-sensitive systems (Linux).
@@ -33,15 +33,33 @@ config_file="make_msvc-libs_conf.txt"
 interactive=false
 if [ -z "$SHLVL" ] || [ "$SHLVL" = 1 ]; then interactive=true; fi
 
-scriptdir=$(cd -- "$(dirname -- "$0")" &>/dev/null && pwd)
+opt_quiet=0
 
-cd "$scriptdir"
+while [[ $# -gt 0 ]]; do
+	if [[ $1 =~ ^[/-]. ]]; then
+		opt=${1:1}
+		case $opt in
+			q) opt_quiet=1;;
+			*)
+				echo "ERROR: Invalid option $opt."
+				exit_script 1
+		esac
+	else	
+		echo "ERROR: Invalid argument."
+		exit_script 1
+	fi
+	shift
+done
+
+script_dir=$(cd -- "$(dirname -- "$0")" &>/dev/null && pwd)
+
+cd "$script_dir"
 if [ $? != 0 ]; then exit_script 10; fi
 
 echo
 
-if [ ! -f "$scriptdir/$config_file" ]; then
-	echo "Configuration file not found: $config_file ."
+if [ ! -f "$script_dir/$config_file" ]; then
+	echo "ERROR: Configuration file not found: $config_file ."
 	exit_script 2
 fi
 
@@ -66,7 +84,7 @@ if [ ! -f "$MSVC_SDK_INCLUDE_PATH/um/Windows.h" ] && \
 	exit_script 3
 fi
 
-msvc_dirpath="$scriptdir/$msvc_dirname"
+msvc_dirpath="$script_dir/$msvc_dirname"
 
 if [ -e "$msvc_dirpath" ]; then
 	echo "The \"$msvc_dirname\" directory already exists."
@@ -78,10 +96,14 @@ echo "This script creates a repackaged standalone MSVC/SDK library from the"
 echo "Visual Studio library."
 echo
 echo "The directory \"$msvc_dirname\" will be created in"
-echo "$scriptdir ."
-echo
-read -rsn1 -p "Press any key to continue..."
-echo
+echo "$script_dir ."
+
+if [ "$opt_quiet" = 0 ]; then
+	echo
+	read -rsn1 -p "Press any key to continue..."
+	echo
+fi
+
 echo
 
 mkdir "$msvc_dirname"
@@ -97,8 +119,8 @@ do
 	line=${line%%#*}	# Remove comments
 	line=$(trim "$line")
 	if [ -n "$line" ]; then
-		IFS="|" read -r opt type source <<< "$line"
-		opt=$(trim "$opt")
+		IFS="|" read -r recurs type source <<< "$line"
+		recurs=$(trim "$recurs")
 		type=$(trim "$type")
 		source=$(trim "${source}")
 
@@ -119,12 +141,10 @@ do
 			error_config $linenum
 		esac
 
-		case $opt in
+		case $recurs in
 		0)
-			options=""
 			subdirs="";;
 		1)
-			options="r"
 			subdirs="/*";;
 		*)
 			error_config $linenum
@@ -141,7 +161,7 @@ do
 		mkdir -p "$destdir$source"
 		if [ $? != 0 ]; then error_copy; fi
 
-		if [ "$opt" = 1 ]; then
+		if [ "$recurs" = 1 ]; then
 			cp -rf "$sourcedir$source/." "$destdir$source"
 		else
 			find "$sourcedir$source" -maxdepth 1 -type f -print0 | \
@@ -152,7 +172,7 @@ do
 		fi
 		if [ $? != 0 ]; then error_copy; fi
 	fi
-done 3<"$scriptdir/$config_file"
+done 3<"$script_dir/$config_file"
 
 
 #
@@ -238,17 +258,20 @@ search_path() {
 	local msvc_sdk_source="Windows Kits"
 
 	if [ -d "$msvc_crt_source" ] && [ -d "$msvc_sdk_source" ]; then
-		local version="$(cd "$msvc_crt_source" && ls -d -- */ | tail -n 1)"
+		local version="$({ cd "$msvc_crt_source" && ls -d -- */ | tail -n 1; } \
+			2>/dev/null)"
 		version=${version%/}
 		if [ -z "$version" ]; then return 1; fi
-		VCToolsInstallDir="$scriptdir/$msvc_crt_source/$version"
+		VCToolsInstallDir="$script_dir/$msvc_crt_source/$version"
 
-		version="$(cd "$msvc_sdk_source" && ls -d -- */ | tail -n 1)"
+		version="$({ cd "$msvc_sdk_source" && ls -d -- */ | tail -n 1; } \
+			2>/dev/null)"
 		version=${version%/}
 		if [ -z "$version" ]; then return 1; fi
-		WindowsSdkDir="$scriptdir/$msvc_sdk_source/$version"
+		WindowsSdkDir="$script_dir/$msvc_sdk_source/$version"
 
-		version="$(cd "$msvc_sdk_source/$version/Include" && ls -d -- */ | tail -n 1)"
+		version="$({ cd "$msvc_sdk_source/$version/Include" && ls -d -- */ | \
+			tail -n 1; } 2>/dev/null)"
 		version=${version%/}
 		if [ -z "$version" ]; then return 1; fi
 		WindowsSDKVersion=$version
@@ -285,7 +308,7 @@ error_rename_includes() {
 }
 
 exit_script() {
-	if $interactive; then
+	if [ "$opt_quiet" = 0 ] && $interactive; then
 		echo
 		read -d '' -t1
 		read -rsn1 -p "Press any key to exit..."

@@ -14,16 +14,17 @@ Before using it, you must check the following are installed:
 
 - _Python_.
 - On Linux, the package _msitools_.
-	
+
 Then open a terminal and run:
 
 	# On Linux:
 	chmod u+x vsdownload.py
 	./vsdownload.py --dest "<download_directory>"
-	
+
 	:: On Windows:
 	vsdownload.py --dest "<download_directory>"
 
 where `<download_directory>` is the directory where you want to put the
 downloaded files.
 
+Choose a directory whose path __does not contain spaces__ or special characters.
