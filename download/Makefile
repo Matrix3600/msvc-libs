@@ -163,7 +163,6 @@ else
  	} 2>/dev/null)
  version := $$(version:%/=%)
 endif
-# $$(info CRT_VERSION=$$(version))
 endef
 
 define DO_UPDATE_VERSION
@@ -248,13 +247,6 @@ ifndef PACKAGES
  PACKAGES = $(DEFAULT_PACKAGES)
 endif
 PACKAGES += $(SDK_ALL)
-
-#$(info DEFAULT_PACKAGES=$(DEFAULT_PACKAGES))
-#$(info PACKAGES=$(PACKAGES))
-#$(info ONLY_DL=$(ONLY_DL))
-#$(info NO_DL=$(NO_DL))
-#$(info MAKE_LIB=$(MAKE_LIB))
-#$(info )
 
 # -----------------------------------------------------------------------------
 # Targets
