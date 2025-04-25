@@ -1,0 +1,449 @@
+<# :: Do not remove
+@echo off
+::
+:: make_msvc-libs.cmd
+::
+:: ----------------------------------------------------------------------------
+:: Copyright 2025 https://github.com/Matrix3600
+::
+:: Licensed under the Apache License, Version 2.0 (the "License");
+:: you may not use this file except in compliance with the License.
+:: You may obtain a copy of the License at
+::
+::   http://www.apache.org/licenses/LICENSE-2.0
+::
+:: Unless required by applicable law or agreed to in writing, software
+:: distributed under the License is distributed on an "AS IS" BASIS,
+:: WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+:: See the License for the specific language governing permissions and
+:: limitations under the License.
+:: ----------------------------------------------------------------------------
+::
+:: Build the repackaged MSVC/SDK headers and libraries.
+::
+:: Compatible with Windows and Linux for cross-compilation.
+::
+:: - Rename the files and directories to lowercase for compatibility
+::   with case-sensitive systems (Linux).
+:: - Rename the include directives in source files accordingly.
+::
+
+:: Visual Studio installation directory (if applicable),
+:: e.g., C:\Program Files (x86)\Microsoft Visual Studio\2022\Community
+:: If this parameter is not set, the script attempts to find it.
+:: If the script cannot find it, modify and uncomment the line below:
+:: set "VS_INSTALL_DIR=C:\Program Files (x86)\Microsoft Visual Studio\2022\Community"
+
+
+setlocal DisableDelayedExpansion
+
+set "exit_code=0"
+
+set "msvc_dirname=msvc-libs"
+set "config_file=make_msvc-libs_conf.txt"
+
+set "interactive="
+echo %cmdcmdline%| find /i "%~0" >nul
+if not errorlevel 1 set "interactive=1"
+
+set "opt_include=0"
+set "opt_quiet=0"
+
+for %%a in (%*) do (
+	call :parse_arg "%%~a"
+	if errorlevel 1 (
+		set "exit_code=1"
+		goto end
+	)
+)
+goto args_end
+
+:parse_arg
+set "arg=%~1"
+if not "%arg:~0,1%"=="/" if not "%arg:~0,1%"=="-" goto argument
+if "%arg:~1%"=="" goto argument
+set "arg=%arg:~1%"
+:opt_loop
+if not defined arg exit /b 0
+set "opt=%arg:~0,1%"
+if "%opt%"=="i" (set "opt_include=1"
+) else if "%opt%"=="q" (set "opt_quiet=1"
+) else (
+	echo ERROR: Invalid option %opt%.
+	exit /b 1
+)
+set "arg=%arg:~1%"
+goto opt_loop
+
+:argument
+echo ERROR: Invalid argument.
+exit /b 1
+
+:args_end
+
+set "script_dir=%~dp0"
+if "%script_dir:~-1%"=="\" set "script_dir=%script_dir:~0,-1%"
+
+cd /d "%script_dir%"
+if errorlevel 1 set "exit_code=10" & goto end
+
+echo(
+
+if not exist "%script_dir%\%config_file%" (
+	echo ERROR: Configuration file not found: "%config_file%".
+	set "exit_code=2"
+	goto end
+)
+
+call :search_path
+if errorlevel 1 goto error_path
+
+set "MSVC_CRT_PATH=%VCToolsInstallDir%"
+set "MSVC_SDK_INCLUDE_PATH=%WindowsSdkDir%\Include\%WindowsSDKVersion%"
+set "MSVC_SDK_LIB_PATH=%WindowsSdkDir%\Lib\%WindowsSDKVersion%"
+
+if not exist "%MSVC_CRT_PATH%\include\stdarg.h" (
+	echo ERROR: MSVC library not found.
+	set "exit_code=3"
+	goto end
+)
+
+if not exist "%MSVC_SDK_INCLUDE_PATH%\um\windows.h" (
+	echo ERROR: Windows SDK library not found.
+	set "exit_code=3"
+	goto end
+)
+
+set "msvc_dirpath=%script_dir%\%msvc_dirname%"
+
+if exist "%msvc_dirpath%" (
+	echo The "%msvc_dirname%" directory already exists.
+	echo Please delete or rename it.
+	set "exit_code=11"
+	goto end
+)
+
+echo This script creates a repackaged standalone MSVC/SDK library from the
+echo Visual Studio library.
+echo(
+echo The directory "%msvc_dirname%" will be created in:
+echo %script_dir%
+
+if "%opt_quiet%"=="0" (
+	echo(
+	echo Press any key to continue...
+	pause >nul
+)
+echo(
+
+mkdir "%msvc_dirpath%
+if errorlevel 1 set "exit_code=10" & goto end
+
+pushd "%msvc_dirpath%"
+if errorlevel 1 set "exit_code=10" & goto end
+
+setlocal EnableDelayedExpansion
+
+set "linenum=0"
+
+for /f "tokens=1-3 usebackq eol=# delims=|" %%i in (
+		"%script_dir%\%config_file%") do (
+	set /a linenum += 1
+	set "recurs=%%~i"
+	set "type=%%~j"
+	set "source=%%~k"
+	call :trim recurs & call :trim type & call :trim source
+
+	set "sourcedir="
+	set "destdir="
+	if "!type!"=="CRT" (
+		set "sourcedir=%MSVC_CRT_PATH%"
+		set "destdir=crt"
+	) else if "!type!"=="SDK_INCLUDE" (
+		set "sourcedir=%MSVC_SDK_INCLUDE_PATH%"
+		set "destdir=sdk\include"
+	) else if "!type!"=="SDK_LIB" (
+		set "sourcedir=%MSVC_SDK_LIB_PATH%"
+		set "destdir=sdk\lib"
+	) else goto error_config
+
+	if not "!recurs!"=="0" if not "!recurs!"=="1" goto error_config
+
+	if defined source set "source=!source:/=\!"
+	if defined source if "!source:~0,1!"=="\" set "source=!source:~1!"
+	if defined source if "!source:~-1!"=="\" set "source=!source:~0,-1!"
+	if defined source if "!source!"=="." set "source="
+	if defined source set "source=\!source:..=!"
+	if defined source (
+		set "msg_source=[!type!]!source!"
+		set "copy_source=!sourcedir!!source!\*"
+		set "copy_dest=!destdir!!source!"
+	) else (
+		set "msg_source=[!type!]"
+		set "copy_source=!sourcedir!\*"
+		set "copy_dest=!destdir!"
+	)
+
+	if exist "!copy_source!" (
+		if "!recurs!"=="0" (
+			echo Copying "!msg_source!" to "!copy_dest!" ...
+			xcopy /qy "!copy_source!" "!copy_dest!\"
+		) else (
+			echo Copying "!msg_source!\*" to "!copy_dest!" ...
+			xcopy /qys "!copy_source!" "!copy_dest!\"
+		)
+		if errorlevel 1 goto error_copy
+	) else if "%opt_include%"=="0" (
+			echo Directory not found "!msg_source!".
+			goto error_copy
+	)
+)
+
+endlocal
+
+popd
+
+set "pwsh_exec=pwsh.exe"
+set "pwsh_version=7"
+"%pwsh_exec%" -version >nul 2>&1
+if %errorlevel% equ 0 goto pwsh_ok
+set "pwsh_exec=powershell.exe"
+set "pwsh_version=5"
+:pwsh_ok
+
+set args="%msvc_dirpath%" "%pwsh_version%"
+set args=%args:"=\"%
+set args=%args:'=''%
+
+"%pwsh_exec%" -c ^"Invoke-Expression ('^& {' + ^
+	[io.file]::ReadAllText(\"%~f0\") + '} %args%')"
+set "exit_code=%errorlevel%"
+if %exit_code% neq 0 goto end
+
+echo(
+echo Done.
+echo(
+echo Move the "%msvc_dirname%" directory to the final location and set the
+echo MSVC_LIBS_PATH environment variable to it to use it.
+
+:end
+if "%opt_quiet%"=="0" if defined interactive (
+	echo(
+	echo Press any key to exit...
+	pause >nul
+)
+exit /b %exit_code%
+
+
+:search_path
+if "%VCToolsInstallDir%"=="" goto search_path_1
+if "%WindowsSdkDir%"=="" goto search_path_1
+if "%WindowsSDKVersion%"=="" goto search_path_1
+goto vs_env_vars_ok
+
+:search_path_1
+if "%VS_INSTALL_DIR%"=="" goto search_path_2
+set "my_vsinstalldir=%VS_INSTALL_DIR%"
+goto installdir_ok
+
+:search_path_2
+if not exist "Windows Kits\" goto search_path_3
+if not exist "VC\Tools\MSVC\" goto search_path_3
+set "version="
+for /f %%i in ('dir VC\Tools\MSVC /b/a:d') do set "version=%%i"
+if "%version%"=="" goto search_path_3
+set "VCToolsInstallDir=%script_dir%\VC\Tools\MSVC\%version%"
+set "version="
+for /f %%i in ('dir "Windows Kits" /b/a:d') do set "version=%%i"
+if "%version%"=="" goto search_path_3
+set "WindowsSdkDir=%script_dir%\Windows Kits\%version%"
+set "version="
+for /f %%i in ('dir "%WindowsSdkDir%\Include" /b/a:d') do set "version=%%i"
+if "%version%"=="" goto search_path_3
+set "WindowsSDKVersion=%version%"
+exit /b 0
+
+:search_path_3
+call :get_vsinstalldir ^
+	HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\6487e3bb ^
+	InstallLocation
+if %errorlevel% neq 0 exit /b 1
+
+:installdir_ok
+if "%my_vsinstalldir:~-1%"=="\" set "my_vsinstalldir=%my_vsinstalldir:~0,-1%"
+set "VsDevCmd=%my_vsinstalldir%\Common7\Tools\VsDevCmd.bat"
+
+if not exist "%VsDevCmd%" exit /b 1
+:: Get the Visual Studio environment variables
+:: 1=Do NOT send telemetry
+set "VSCMD_SKIP_SENDTELEMETRY=1"
+call "%VsDevCmd%" >nul
+
+if "%VCToolsInstallDir%"=="" exit /b 1
+if "%WindowsSdkDir%"=="" exit /b 1
+if "%WindowsSDKVersion%"=="" exit /b 1
+
+:vs_env_vars_ok
+if "%VCToolsInstallDir:~-1%"=="\" set "VCToolsInstallDir=%VCToolsInstallDir:~0,-1%"
+if "%WindowsSdkDir:~-1%"=="\" set "WindowsSdkDir=%WindowsSdkDir:~0,-1%"
+if "%WindowsSDKVersion:~-1%"=="\" set "WindowsSDKVersion=%WindowsSDKVersion:~0,-1%"
+exit /b 0
+
+:get_vsinstalldir
+set my_vsinstalldir=
+for /f "tokens=2*" %%i in ('reg query "%~1" /v "%~2" 2^>nul') do set "my_vsinstalldir=%%~j"
+if "%my_vsinstalldir%"=="" exit /b 1
+exit /b 0
+
+
+:error_config
+echo(
+echo ERROR: Invalid configuration file on enabled data line %linenum%.
+set "exit_code=2"
+goto end
+
+:error_path
+echo The Visual Studio installation location could not be found.
+echo Please run this script from the "Developer Command Prompt for VS"
+echo using the Start menu shortcut.
+set "exit_code=3"
+goto end
+
+:error_copy
+echo(
+echo ERROR: Copying files failed.
+set "exit_code=4"
+goto end
+
+
+::
+:: trim <var_name>
+:: Remove leading and trailing spaces in variable <var_name>
+::
+:trim
+setLocal
+call :trimSub %%%~1%%
+endLocal & set "%~1=%tempvar%"
+exit /b
+:trimSub
+set "tempvar=%*"
+exit /b
+
+
+###############################################################################
+Start of PowerShell section                                                  #>
+
+<#
+	Rename all files and subdirectories to lowercase.
+	Rename filenames to lowercase in include directives.
+
+param (
+	# Root directory
+	[Parameter(Mandatory=$true, Position=0)]
+	[string]$rootDirectory,
+
+	# powerShellVersion
+	[Parameter(Mandatory=$true, Position=1)]
+	[int]$powerShellVersion
+)
+#>
+
+$ErrorActionPreference = 'Stop'
+
+if ($Args.Length -ne 2) { exit 20 }
+$rootDirectory = $Args[0]
+$powerShellVersion = $Args[1]
+
+Write-Host
+
+
+#
+# Rename all files and subdirectories to lowercase.
+#
+try {
+	Get-ChildItem -LiteralPath $rootDirectory -Recurse |
+			Where { $_.Name -cne $_.Name.ToLower() } |
+			Sort-Object | ForEach-Object {
+		$tn = "$($_.Name)-temp"
+		$tfn = "$($_.FullName)-temp"
+		$nn = $_.Name.ToLower()
+		Rename-Item -LiteralPath $_.FullName -NewName $tn
+		Rename-Item -LiteralPath $tfn -NewName $nn -Force
+
+		$relFilename = $_.FullName.Replace( "$($rootDirectory)\", '' )
+		Write-Host "Renamed '$($relFilename)' as '$($nn)'"
+	}
+}
+catch {
+	Write-Host $_
+	Write-Host
+	Write-Host "ERROR: Renaming of files failed."
+	exit 5
+}
+
+
+#
+# Rename filenames to lowercase in include directives.
+#
+
+function ProcessIncludeFile( $fileInfo )
+{
+	if ($fileInfo.GetType().Name -ne 'FileInfo') { return }
+
+	$relFilename = $fileInfo.FullName.Replace( "$($rootDirectory)\", '' )
+
+	$count = 0
+	$content = (Get-Content $fileInfo.FullName) | ForEach-Object {
+
+		if ($powerShellVersion -ge 6) {
+			# Version >= 6
+			$line = $_ -replace '(#include\s*[<"])([^">]*)([>"])',
+				{ "$($_.Groups[1].Value)$($_.Groups[2].Value.ToLower())$($_.Groups[3].Value)" }
+		}
+		else {
+			# Version < 6
+			if ($_ -match '(#include\s*[<"])([^">]*)([>"])') {
+				$line = $_.Replace( $Matches[0], "$($Matches[1])$($Matches[2].ToLower())$($Matches[3])" )
+			}
+			else { $line = $_ }
+		}
+
+		if ($line -cne $_) { $count++ }
+		$line
+	}
+
+	if ($count -ne 0) {
+		Set-Content -value $content -path $fileInfo.FullName
+		Write-Host "'$($relFilename)'"
+	}
+}
+
+$crtIncludeDirectory = $rootDirectory + '\crt\include'
+$crtAtlMfcIncludeDirectory = $rootDirectory + '\crt\atlmfc\include'
+$sdkIncludeDirectory = $rootDirectory + '\sdk\include'
+
+try {
+	if (Test-Path -path $crtIncludeDirectory) {
+		Write-Host "`nProcessing CRT include directory ...`n"
+		Get-ChildItem -LiteralPath $crtIncludeDirectory -Recurse | Sort-Object |
+			ForEach-Object { ProcessIncludeFile( $_ ) }
+	}
+	if (Test-Path -path $crtAtlMfcIncludeDirectory) {
+		Write-Host "`nProcessing CRT AtlMfc include directory ...`n"
+		Get-ChildItem -LiteralPath $crtAtlMfcIncludeDirectory -Recurse | Sort-Object |
+			ForEach-Object { ProcessIncludeFile( $_ ) }
+	}
+	if (Test-Path -path $sdkIncludeDirectory) {
+		Write-Host "`nProcessing SDK include directory ...`n"
+		Get-ChildItem -LiteralPath $sdkIncludeDirectory -Recurse | Sort-Object |
+			ForEach-Object { ProcessIncludeFile( $_ ) }
+	}
+}
+catch {
+	Write-Host $_
+	Write-Host
+	Write-Host "ERROR: Renaming of includes failed."
+	exit 6
+}
+
+exit 0
