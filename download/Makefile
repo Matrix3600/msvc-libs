@@ -380,5 +380,6 @@ ifdef NATIVEWIN
 	make_msvc-libs.cmd -iq
 else
 	rm -rf "$(MSVC_LIBS_DIR)"
+	@chmod u+x make_msvc-libs.sh
 	./make_msvc-libs.sh -iq
 endif
