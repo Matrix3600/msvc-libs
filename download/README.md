@@ -22,9 +22,9 @@ Requirements
   extraction will fail.
 - The following must be installed:
 
-  * GNU make.
-  * Python 3, to run the download script.
-  * On Linux, a recent version of the "msitools" package.
+  * _GNU make_.
+  * _Python 3_, to run the download script.
+  * On Linux, a recent version of the _msitools_ package.
 
 
 Running the Makefile

@@ -52,18 +52,18 @@ The scripts copy the Visual Studio library files, then make some adjustments:
 
 
 
-Requirements
-------------
+Visual Studio library
+---------------------
 
 If Visual Studio is installed, the scripts are immediately usable.
 
 Otherwise, the original files are downloadable from the Microsoft servers.
 
-Follow these [instructions](/download/download_vslib.md) to download the Visual Studio
-MSVC/SDK library.
+Follow these [instructions](/download/download_vslib.md) to download the Visual
+Studio MSVC/SDK library.
 
-Later, after creating the standalone library, you will be able to delete the
-download directory and its contents.
+You can also use a [Makefile](/download/README.md) which downloads the files
+and creates the repackaged library in one operation.
 
 
 

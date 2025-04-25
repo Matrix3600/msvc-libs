@@ -5,17 +5,17 @@ The original files are downloadable from the Microsoft servers. You
 need to accept the [license](
 https://go.microsoft.com/fwlink/?LinkId=2179911).
 
-You can use a Python script in the [msvc-wine](
-https://github.com/mstorsjo/msvc-wine) github repository to download the files.
-
-Only the file `vsdownload.py` is needed.
+You can use the `vsdownload.py` _Python_ script to download the files.
 
 Before using it, you must check the following are installed:
 
-- _Python_.
-- On Linux, the package _msitools_.
+- _Python 3_.
+- On Linux, a recent version of the _msitools_ package.
 
-Then open a terminal and run:
+On Windows, the download directory must have a __short path__ (less than 35
+characters), otherwise the extraction will fail.
+
+Open a terminal and run:
 
 	# On Linux:
 	chmod u+x vsdownload.py
@@ -26,7 +26,3 @@ Then open a terminal and run:
 
 where `<download_directory>` is the directory where you want to put the
 downloaded files.
-
-On Windows, choose a directory with a __short path__ (less than 35 characters),
-otherwise the extraction will fail. On Linux, there doesn't seem to be any
-problem.
