@@ -12,8 +12,8 @@ Before using it, you must check the following are installed:
 - _Python 3_.
 - On Linux, a recent version of the _msitools_ package.
 
-On Windows, the download directory must have a __short path__ (less than 35
-characters), otherwise the extraction will fail.
+On Windows, the download directory must have a __short path__ (less than 38
+characters), otherwise the packages extraction will fail.
 
 Open a terminal and run:
 

@@ -73,7 +73,7 @@
 # *** Requirements ***
 #
 # - On Windows, the download directory (where the Makefile is located) must
-#   have a short path (less than 35 characters), otherwise the packages
+#   have a short path (less than 38 characters), otherwise the packages
 #   extraction will fail.
 #
 # - The following must be installed:
