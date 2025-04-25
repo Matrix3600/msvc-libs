@@ -33,17 +33,23 @@ config_file="make_msvc-libs_conf.txt"
 interactive=false
 if [ -z "$SHLVL" ] || [ "$SHLVL" = 1 ]; then interactive=true; fi
 
+opt_include=0
 opt_quiet=0
 
 while [[ $# -gt 0 ]]; do
 	if [[ $1 =~ ^[/-]. ]]; then
-		opt=${1:1}
-		case $opt in
-			q) opt_quiet=1;;
-			*)
-				echo "ERROR: Invalid option $opt."
-				exit_script 1
-		esac
+		arg=${1:1}
+		while [[ -n $arg ]]; do
+			opt=${arg:0:1}
+			case $opt in
+				i) opt_include=1;;
+				q) opt_quiet=1;;
+				*)
+					echo "ERROR: Invalid option $opt."
+					exit_script 1
+			esac
+			arg=${arg:1}
+		done	
 	else	
 		echo "ERROR: Invalid argument."
 		exit_script 1
@@ -95,8 +101,8 @@ fi
 echo "This script creates a repackaged standalone MSVC/SDK library from the"
 echo "Visual Studio library."
 echo
-echo "The directory \"$msvc_dirname\" will be created in"
-echo "$script_dir ."
+echo "The directory \"$msvc_dirname\" will be created in:"
+echo "$script_dir"
 
 if [ "$opt_quiet" = 0 ]; then
 	echo
@@ -156,21 +162,26 @@ do
 		if [ "$source" = "." ]; then source=""; fi
 		if [ -n "$source" ]; then source="/${source//..}"; fi	# Remove ..
 
-		echo Copying "[$type]$source$subdirs" to "$destdir$source" ...
+		if [ -d "$sourcedir$source" ]; then
+			echo Copying "[$type]$source$subdirs" to "$destdir$source" ...
 
-		mkdir -p "$destdir$source"
-		if [ $? != 0 ]; then error_copy; fi
+			mkdir -p "$destdir$source"
+			if [ $? != 0 ]; then error_copy; fi
 
-		if [ "$recurs" = 1 ]; then
-			cp -rf "$sourcedir$source/." "$destdir$source"
-		else
-			find "$sourcedir$source" -maxdepth 1 -type f -print0 | \
-				while IFS= read -r -d '' file; do
-					cp -f "$file" "$destdir$source"
-					if [ $? != 0 ]; then return 1; fi
-				done
-		fi
-		if [ $? != 0 ]; then error_copy; fi
+			if [ "$recurs" = 1 ]; then
+				cp -rf "$sourcedir$source/." "$destdir$source"
+			else
+				find "$sourcedir$source" -maxdepth 1 -type f -print0 | \
+					while IFS= read -r -d '' file; do
+						cp -f "$file" "$destdir$source"
+						if [ $? != 0 ]; then return 1; fi
+					done
+			fi
+			if [ $? != 0 ]; then error_copy; fi
+		elif [ "$opt_include" = 0 ]; then
+			echo Directory not found "[$type]$source".
+			error_copy;
+		fi	
 	fi
 done 3<"$script_dir/$config_file"
 

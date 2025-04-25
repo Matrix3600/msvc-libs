@@ -32,6 +32,7 @@ set "interactive="
 echo %cmdcmdline%| find /i "%~0" >nul
 if not errorlevel 1 set "interactive=1"
 
+set "opt_include=0"
 set "opt_quiet=0"
 
 for %%a in (%*) do (
@@ -46,14 +47,19 @@ goto args_end
 :parse_arg
 set "arg=%~1"
 if not "%arg:~0,1%"=="/" if not "%arg:~0,1%"=="-" goto argument
-set "opt=%arg:~1%"
-if "%opt%"=="" goto argument
-if "%opt%"=="q" (set "opt_quiet=1"
+if "%arg:~1%"=="" goto argument
+set "arg=%arg:~1%"
+:opt_loop
+if not defined arg exit /b 0
+set "opt=%arg:~0,1%"
+if "%opt%"=="i" (set "opt_include=1"
+) else if "%opt%"=="q" (set "opt_quiet=1"
 ) else (
 	echo ERROR: Invalid option %opt%.
 	exit /b 1
 )
-exit /b 0
+set "arg=%arg:~1%"
+goto opt_loop
 
 :argument
 echo ERROR: Invalid argument.
@@ -70,7 +76,7 @@ if errorlevel 1 set "exit_code=10" & goto end
 echo(
 
 if not exist "%script_dir%\%config_file%" (
-	echo ERROR: Configuration file not found: "%config_file%" .
+	echo ERROR: Configuration file not found: "%config_file%".
 	set "exit_code=2"
 	goto end
 )
@@ -106,8 +112,8 @@ if exist "%msvc_dirpath%" (
 echo This script creates a repackaged standalone MSVC/SDK library from the
 echo Visual Studio library.
 echo(
-echo The directory "%msvc_dirname%" will be created in
-echo %script_dir% .
+echo The directory "%msvc_dirname%" will be created in:
+echo %script_dir%
 
 if "%opt_quiet%"=="0" (
 	echo(
@@ -147,23 +153,36 @@ for /f "tokens=1-3 usebackq eol=# delims=|" %%i in (
 		set "destdir=sdk\lib"
 	) else goto error_config
 
-	if "!recurs!"=="0" (
-		set "copy_opt="
-		set "subdirs="
-	) else if "!recurs!"=="1" (
-		set "copy_opt=s"
-		set "subdirs=\*"
-	) else goto error_config
+	if not "!recurs!"=="0" if not "!recurs!"=="1" goto error_config
 
-	set "source=!source:/=\!"
-	if "!source:~0,1!"=="\" set "source=!source:~1!"
-	if "!source:~-1!"=="\" set "source=!source:~0,-1!"
-	if "!source!"=="." set "source="
-	if "!source!" neq "" set "source=\!source:..=!"
-	set "dest=!destdir!!source!"
-	call echo Copying "[!type!]!source!!subdirs!" to "!dest!" ...
-	call xcopy /qy!copy_opt! "!sourcedir!!source!\*" "!dest!\"
-	if errorlevel 1 goto error_copy
+	if defined source set "source=!source:/=\!"
+	if defined source if "!source:~0,1!"=="\" set "source=!source:~1!"
+	if defined source if "!source:~-1!"=="\" set "source=!source:~0,-1!"
+	if defined source if "!source!"=="." set "source="
+	if defined source set "source=\!source:..=!"
+	if defined source (
+		set "msg_source=[!type!]!source!"
+		set "copy_source=!sourcedir!!source!\*"
+		set "copy_dest=!destdir!!source!"
+	) else (
+		set "msg_source=[!type!]"
+		set "copy_source=!sourcedir!\*"
+		set "copy_dest=!destdir!"
+	)
+
+	if exist "!copy_source!" (
+		if "!recurs!"=="0" (
+			echo Copying "!msg_source!" to "!copy_dest!" ...
+			xcopy /qy "!copy_source!" "!copy_dest!\"
+		) else (
+			echo Copying "!msg_source!\*" to "!copy_dest!" ...
+			xcopy /qys "!copy_source!" "!copy_dest!\"
+		)
+		if errorlevel 1 goto error_copy
+	) else if "%opt_include%"=="0" (
+			echo Directory not found "!msg_source!".
+			goto error_copy
+	)
 )
 
 endlocal
