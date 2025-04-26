@@ -6,12 +6,12 @@ Studio library and create a repackaged standalone library from it.
 
 It runs on Windows or Linux.
 
+The original files are downloadable from the Microsoft servers. You
+must accept the [license](https://go.microsoft.com/fwlink/?LinkId=2179911).
+
 Note that the Visual Studio library is not redistributable, so neither is the
 repackaged version.
 
-The original files are downloadable from the Microsoft servers. You
-need to accept the [license](
-https://go.microsoft.com/fwlink/?LinkId=2179911).
 
 
 Requirements
@@ -24,7 +24,11 @@ Requirements
 
   * _GNU make_.
   * _Python 3_, to run the download script.
-  * On Linux, a recent version of the _msitools_ package.
+  * On Linux, a recent version of these packages:
+
+    - _msitools_ (0.98+)
+    - _libgcab-1.0-0_ (1.2+)
+<br />
 
 
 Running the Makefile
@@ -40,6 +44,7 @@ This downloads the files and creates the repackaged library in a new
 
 Move it to the final location and set the `MSVC_LIBS_PATH` environment 
 variable to it to use it.
+
 
 
 Configuration
@@ -68,3 +73,12 @@ To remove all the directories created by the Makefile, including the download
 directory and the created library, run:
 
 	make clean-all
+
+
+
+Credits
+-------
+
+Thanks to:
+
+_Martin Storsjö_ for the download script (vsdownload.py).
