@@ -37,33 +37,36 @@
 # contents of the library to build (see below).
 #
 # Parameters:
-#		default			intel or arm, depending on your machine architecture.
-#								Implicit when no parameter is specified.
-# 	all					intel + arm + atl + atlarm
-#		intel				[VC.Tools.x86.x64] + sdk
-#   arm					arm32 + arm64
-#		x86					= intel
-#		x64					= intel
-#		arm32				[VC.Tools.ARM] + sdk
-#		arm64				[VC.Tools.ARM64] + sdk
-#		atl					[VC.ATL] + intel
-#		atlarm			atlarm32 + atlarm64
-#		atl32				= atl
-#		atl64				= atl
-#		atlarm32		[VC.ATL.ARM] + arm32
-#		atlarm64		[VC.ATL.ARM64] + arm64
-#		sdk					[Windows11SDK.22621]
-#		onlydl			Download only, do not create the standalone library.
-#		nodl				Do not download anything. Stop if any package is missing.
-#		msvc-libs		Build the repackaged standalone library (msvc-libs directory).
-#								Implicit if "onlydl" is not specified.
-#		clean				Delete the "msvc-libs" directory of created standalone library,
-#								do not delete any downloaded files.
-#		clean-all		Delete all the directories created by this makefile.
-#		clean-dl		Delete all the download directories ("VC" and "Windows Kits").
-#		clean-msvc	Delete the "VC" directory.
-#		clean-sdk		Delete the "Windows Kits" directory.
-#		clean-atl		Delete the ATL download directory.
+#   default       intel or arm, depending on your machine architecture.
+#                 Implicit when no argument is specified.
+#   all           intel + arm + atl + atlarm
+#   intel         [VC.Tools.x86.x64] + sdk
+#   arm           arm32 + arm64
+#   x86           = intel
+#   x64           = intel
+#   arm32         [VC.Tools.ARM] + sdk
+#   arm64         [VC.Tools.ARM64] + sdk
+#   atl           [VC.ATL] + intel
+#   atlarm        atlarm32 + atlarm64
+#   atl32         = atl
+#   atl64         = atl
+#   atlarm32      [VC.ATL.ARM] + arm32
+#   atlarm64      [VC.ATL.ARM64] + arm64
+#   sdk           [Windows11SDK.22621]
+#   onlydl        Download only, do not create the standalone library.
+#   nodl          Do not download anything. Stop if any package is missing.
+#   msvc-libs     Build the repackaged standalone library (msvc-libs
+#                 directory). Implicit if "onlydl" is not specified.
+#   lang=xx[-yy]  Preferred language code for packages available in multiple
+#                 languages (default: LANG environment variable, or "en").
+#   clean         Delete the "msvc-libs" directory of created standalone
+#                 library, do not delete any downloaded files.
+#   clean-all     Delete all the directories created by this makefile.
+#   clean-dl      Delete all the download directories ("VC" and
+#                 "Windows Kits").
+#   clean-msvc    Delete the "VC" directory.
+#   clean-sdk     Delete the "Windows Kits" directory.
+#   clean-atl     Delete the ATL download directory.
 #
 # The downloaded packages are indicated in brackets.
 # The unversioned packages are always the latest available.
@@ -74,12 +77,23 @@
 #
 # - On Windows, the download directory (where the Makefile is located) must
 #   have a short path (less than 38 characters), otherwise the packages
-#   extraction will fail.
+#   extraction will fail. This is due to the Windows path length limitation.
 #
 # - The following must be installed:
-# 	* Python 3, to run the download script.
-# 	* On Linux, a recent version of the "msitools" package.
+#   * Python 3, to run the download script.
+#   * On Linux, a recent version of these packages:
+#     o msitools (0.98+)
+#     o libgcab-1.0-0 (1.2+)
 #
+
+ifdef lang
+ DL_LANG := $(lang)
+ override undefine lang
+else
+ ifdef LANG
+  DL_LANG := $(subst _,-,$(firstword $(subst ., ,$(LANG))))
+ endif
+endif
 
 # -----------------------------------------------------------------------------
 # Detect system and check required files
@@ -123,22 +137,27 @@ MSVC_LIBS_CONFIG = make_msvc-libs_conf.txt
 
 ifeq (,$(wildcard $(VSDOWNLOAD_SCRIPT)))
  $(error ERROR: The download script "$(VSDOWNLOAD_SCRIPT)" was not found. \
- 	Please place it in this directory)
+  Please place it in this directory)
 endif
 
 ifeq (,$(wildcard $(MSVC_LIBS_SCRIPT)))
  $(error ERROR: The script "$(MSVC_LIBS_SCRIPT)" was not found. \
- 	Please place it in this directory)
+  Please place it in this directory)
 endif
 
 ifeq (,$(wildcard $(MSVC_LIBS_CONFIG)))
  $(error ERROR: The configuration file "$(MSVC_LIBS_CONFIG)" was not found. \
- 	Please place it in this directory)
+  Please place it in this directory)
 endif
 
 # -----------------------------------------------------------------------------
 # Check downloaded packages
 # -----------------------------------------------------------------------------
+
+override undefine MSVC_DIR
+override undefine SDK_DIR
+override undefine MSVC_LIBS_DIR
+override undefine ATL_DIR
 
 MSVC_DIR = VC
 SDK_DIR = Windows Kits
@@ -150,9 +169,14 @@ CRT_VERSION =
 ATL_DIR = $(CRT_ROOT_DIR)/$(CRT_VERSION)/atlmfc
 
 # Escape spaces
+override undefine empty
+override undefine space
 empty :=
 space := $(empty) $(empty)
 ESC_SPACE = $(subst $(space),\ ,$(1))
+
+override undefine wdir
+override undefine version
 
 define GET_DIR_VERSION
 ifdef NATIVEWIN
@@ -160,7 +184,7 @@ ifdef NATIVEWIN
  version := $$(lastword $$(shell dir "$$(wdir)" /b/a:d 2>nul))
 else
  version := $$(shell { cd "$(1)" && ls -d -- */ | tail -n 1; \
- 	} 2>/dev/null)
+  } 2>/dev/null)
  version := $$(version:%/=%)
 endif
 endef
@@ -177,7 +201,7 @@ ifneq (,$$(CRT_VERSION))
  ifneq (,$$(version))
   ifneq ($$(version),$$(CRT_VERSION))
    $$(error ERROR: MSVC version changed from $$(CRT_VERSION) to $$(version).\
-   	Delete the "VC" directory and run "make" again)
+    Delete the "VC" directory and run "make" again)
   endif
  endif
 endif
@@ -233,12 +257,12 @@ endif
 ifneq (,$(filter onlydl,$(MAKECMDGOALS)))
  MAKE_LIB =
  ifndef PACKAGES
- 	ONLY_DL = default
+  ONLY_DL = default
  endif
 endif
 ifneq (,$(filter nodl,$(MAKECMDGOALS)))
  ifndef PACKAGES
- 	NO_DL = default
+  NO_DL = default
  else
   NO_DL = $(PACKAGES)
  endif
@@ -253,9 +277,9 @@ PACKAGES += $(SDK_ALL)
 # -----------------------------------------------------------------------------
 
 .PHONY: all intel arm x86 x64 arm32 arm64 \
-	atl atlarm atl32 atl64 atlarm32 atlarm64 \
-	sdk default onlydl nodl msvc-libs \
-	clean-all clean-dl clean-msvc clean-sdk clean clean-atl
+  atl atlarm atl32 atl64 atlarm32 atlarm64 \
+  sdk default onlydl nodl msvc-libs \
+  clean-all clean-dl clean-msvc clean-sdk clean clean-atl
 
 default: $(.DEFAULT_GOAL)
 
@@ -292,11 +316,16 @@ clean-dl: clean-msvc clean-sdk
 # Rules
 # -----------------------------------------------------------------------------
 
+DOWNLOAD_OPTIONS = --accept-license --skip-recommended
+ifdef DL_LANG
+ DOWNLOAD_OPTIONS += --language $(DL_LANG)
+endif
+
 .DELETE_ON_ERROR:
 
 define CLEAN_DIR_RULE
-$(1): dir := $$(patsubst %/,%,$(2))
-$(1): wdir := $$(subst /,\,$$(dir))
+$(1): dir := $$(patsubst %/,%,$$(subst \,/,$(2)))
+$(1): wdir := $$(patsubst %\,%,$$(subst /,\,$(2)))
 $(1):
 ifdef NATIVEWIN
 	if exist "$$(wdir)\" rd /s/q "$$(wdir)"
@@ -317,21 +346,21 @@ $(CRT_LIB_X86): $(CRT_LIB_X64)
 
 $(CRT_LIB_X64): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py --accept-license --skip-recommended "Microsoft.VisualStudio.Component.VC.Tools.x86.x64" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.VC.Tools.x86.x64" --dest .
 else
 	$(error Package needed: VC.Tools.x86.x64)
 endif
 
 $(CRT_LIB_ARM): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py --accept-license --skip-recommended "Microsoft.VisualStudio.Component.VC.Tools.ARM" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.VC.Tools.ARM" --dest .
 else
 	$(error Package needed: VC.Tools.ARM)
 endif
 
 $(CRT_LIB_ARM64): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py --accept-license --skip-recommended "Microsoft.VisualStudio.Component.VC.Tools.ARM64" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.VC.Tools.ARM64" --dest .
 else
 	$(error Package needed: VC.Tools.ARM64)
 endif
@@ -340,28 +369,28 @@ $(CRT_LIB_ATL_X86): $(CRT_LIB_ATL_X64)
 
 $(CRT_LIB_ATL_X64): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py --accept-license --skip-recommended "Microsoft.VisualStudio.Component.VC.ATL" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.VC.ATL" --dest .
 else
 	$(error Package needed: VC.ATL)
 endif
 
 $(CRT_LIB_ATL_ARM): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py --accept-license --skip-recommended "Microsoft.VisualStudio.Component.VC.ATL.ARM" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.VC.ATL.ARM" --dest .
 else
 	$(error Package needed: VC.ATL.ARM)
 endif
 
 $(CRT_LIB_ATL_ARM64): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py --accept-license --skip-recommended "Microsoft.VisualStudio.Component.VC.ATL.ARM64" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.VC.ATL.ARM64" --dest .
 else
 	$(error Package needed: VC.ATL.ARM64)
 endif
 
 $(SDK_ALL): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py --accept-license --skip-recommended "Microsoft.VisualStudio.Component.Windows11SDK.22621" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.Windows11SDK.22621" --dest .
 else
 	$(error Package needed: Windows11SDK.22621)
 endif

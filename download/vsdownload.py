@@ -13,6 +13,10 @@
 # WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# Changes by Matrix3600:
+# 2025-04-24: Remove "DIA SDK" and "MSBuild" components.
+# 2025-04-26: Add language parameter.
 
 import argparse
 import functools
@@ -86,6 +90,7 @@ def getArgsParser():
     parser.add_argument("--with-wdk-installers", metavar="dir", help="Install Windows Driver Kit using the provided MSI installers")
     parser.add_argument("--host-arch", metavar="arch", choices=["x86", "x64", "arm64"], help="Specify the host architecture of packages to install")
     parser.add_argument("--only-host", default=True, action=OptionalBoolean, help="Only download packages that match host arch")
+    parser.add_argument("--language", metavar="xx[-yy]", default="en", help="Preferred language code for packages available in multiple languages (default: en)")
     return parser
 
 def setPackageSelectionMSVC16(args, packages, userversion, sdk, toolversion, defaultPackages):
@@ -294,11 +299,28 @@ def prioritizePackage(arch, a, b):
             return r
 
     if "language" in a and "language" in b:
-        aeng = a["language"].lower().startswith("en-")
-        beng = b["language"].lower().startswith("en-")
-        if aeng and not beng:
+        lang = args.language.lower()
+        alang = a["language"].lower()
+        blang = b["language"].lower()
+        if "-" in lang:
+            apref = alang == lang
+            bpref = blang == lang
+        else:
+            apref = alang.startswith(lang + "-")
+            bpref = blang.startswith(lang + "-")
+        alangpriority = 0
+        blangpriority = 0
+        if apref:
+            alangpriority = 2
+        elif alang.startswith("en-"):
+            alangpriority = 1
+        if bpref:
+            blangpriority = 2
+        elif blang.startswith("en-"):
+            blangpriority = 1
+        if alangpriority > blangpriority:
             return -1
-        if beng and not aeng:
+        if alangpriority < blangpriority:
             return 1
     return 0
 
