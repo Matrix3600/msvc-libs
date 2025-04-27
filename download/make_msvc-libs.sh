@@ -27,6 +27,13 @@
 #   with case-sensitive systems (Linux).
 # - Rename the include directives in source files accordingly.
 #
+# Options:
+#   -i  Include the directories specified in the configuration file, but do
+#       not cause any error if they do not exist.
+#   -l  Force selection of local subdirectories for the source (located in
+#       the same directory as this script).
+#   -q  Do not ask for confirmation before starting.
+#
 
 # This script searches for root directories containing source files ("VC" and
 # "Windows Kits") in the same directory as this script. Subdirectories are
@@ -48,6 +55,7 @@ interactive=false
 if [ -z "$SHLVL" ] || [ "$SHLVL" = 1 ]; then interactive=true; fi
 
 opt_include=0
+opt_local=0
 opt_quiet=0
 
 while [[ $# -gt 0 ]]; do
@@ -57,6 +65,7 @@ while [[ $# -gt 0 ]]; do
 			opt=${arg:0:1}
 			case $opt in
 				i) opt_include=1;;
+				l) opt_local=1;;
 				q) opt_quiet=1;;
 				*)
 					echo "ERROR: Invalid option $opt."
@@ -84,25 +93,21 @@ if [ ! -f "$script_dir/$config_file" ]; then
 fi
 
 search_path
-if [ $? != 0 ]; then
-	echo "The Visual Studio library could not be found."
-	exit_script 3
-fi
+case $? in
+0) ;;
+2) error_msvc_path;;
+3) error_sdk_path;;
+*) error_path
+esac
 
 MSVC_CRT_PATH=$VCToolsInstallDir
 MSVC_SDK_INCLUDE_PATH="$WindowsSdkDir/Include/$WindowsSDKVersion"
 MSVC_SDK_LIB_PATH="$WindowsSdkDir/Lib/$WindowsSDKVersion"
 
-if [ ! -f "$MSVC_CRT_PATH/include/stdarg.h" ]; then
-	echo "ERROR: MSVC library not found."
-	exit_script 3
-fi
+if [ ! -f "$MSVC_CRT_PATH/include/stdarg.h" ]; then	error_msvc_path; fi
 
 if [ ! -f "$MSVC_SDK_INCLUDE_PATH/um/Windows.h" ] && \
-	[ ! -f "$MSVC_SDK_INCLUDE_PATH/um/windows.h" ]; then
-	echo "ERROR: Windows SDK library not found."
-	exit_script 3
-fi
+	[ ! -f "$MSVC_SDK_INCLUDE_PATH/um/windows.h" ]; then error_sdk_path; fi
 
 msvc_dirpath="$script_dir/$msvc_dirname"
 
@@ -268,10 +273,9 @@ echo "MSVC_LIBS_PATH environment variable to it to use it."
 
 }
 
-
 search_path() {
-	if [ -n "$VCToolsInstallDir" ] && [ -n "$WindowsSdkDir" ] && \
-			[ -n "$WindowsSDKVersion" ]; then
+	if [ "$opt_local" = 0 ] && [ -n "$VCToolsInstallDir" ] && \
+		[ -n "$WindowsSdkDir" ] && [ -n "$WindowsSDKVersion" ]; then
 		# Remove trailing /
 		VCToolsInstallDir=${VCToolsInstallDir%/}
 		WindowsSdkDir=${WindowsSdkDir%/}
@@ -279,34 +283,56 @@ search_path() {
 		return 0
 	fi
 
-	local msvc_crt_source="VC/Tools/MSVC"
-	local msvc_sdk_source="Windows Kits"
-
-	if [ -d "$msvc_crt_source" ] && [ -d "$msvc_sdk_source" ]; then
-		local version="$({ cd "$msvc_crt_source" && ls -d -- */ | tail -n 1; } \
-			2>/dev/null)"
-		version=${version%/}
-		if [ -z "$version" ]; then return 1; fi
-		VCToolsInstallDir="$script_dir/$msvc_crt_source/$version"
-
-		version="$({ cd "$msvc_sdk_source" && ls -d -- */ | tail -n 1; } \
-			2>/dev/null)"
-		version=${version%/}
-		if [ -z "$version" ]; then return 1; fi
-		WindowsSdkDir="$script_dir/$msvc_sdk_source/$version"
-
-		version="$({ cd "$msvc_sdk_source/$version/Include" && ls -d -- */ | \
-			tail -n 1; } 2>/dev/null)"
-		version=${version%/}
-		if [ -z "$version" ]; then return 1; fi
-		WindowsSDKVersion=$version
-
-		return 0
+	search_local_path
+	local ret_code=$?
+	if [ $ret_code = 0 ]; then return 0
+	elif [ "$opt_local" = 1 ]; then return $ret_code
 	fi
-
 	return 1
 }
 
+search_local_path() {
+	local msvc_crt_source="VC/Tools/MSVC"
+	local msvc_sdk_source="Windows Kits"
+	
+	if [ ! -d "$msvc_crt_source" ]; then return 2; fi
+	if [ ! -d "$msvc_sdk_source" ]; then return 3; fi
+	local version="$({ cd "$msvc_crt_source" && ls -d -- */ | tail -n 1; } \
+		2>/dev/null)"
+	version=${version%/}
+	if [ -z "$version" ]; then return 2; fi
+	VCToolsInstallDir="$script_dir/$msvc_crt_source/$version"
+
+	version="$({ cd "$msvc_sdk_source" && ls -d -- */ | tail -n 1; } \
+		2>/dev/null)"
+	version=${version%/}
+	if [ -z "$version" ]; then return 3; fi
+	WindowsSdkDir="$script_dir/$msvc_sdk_source/$version"
+
+	version="$({ cd "$msvc_sdk_source/$version/Include" && ls -d -- */ | \
+		tail -n 1; } 2>/dev/null)"
+	version=${version%/}
+	if [ -z "$version" ]; then return 3; fi
+	WindowsSDKVersion=$version
+
+	return 0
+}
+
+
+error_msvc_path() {
+	echo "ERROR: MSVC library not found."
+	exit_script 3
+}
+
+error_sdk_path() {
+	echo "ERROR: Windows SDK library not found."
+	exit_script 3
+}
+
+error_path() {
+	echo "ERROR: The Visual Studio library could not be found."
+	exit_script 3
+}
 
 error_config() {
 	echo

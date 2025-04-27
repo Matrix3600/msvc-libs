@@ -27,13 +27,19 @@
 ::   with case-sensitive systems (Linux).
 :: - Rename the include directives in source files accordingly.
 ::
+:: Options:
+::   /i   Include the directories specified in the configuration file, but do
+::        not cause any error if they do not exist.
+::   /l   Force selection of local subdirectories for the source (located in
+::        the same directory as this script).
+::   /q   Do not ask for confirmation before starting.
+::
 
 :: Visual Studio installation directory (if applicable),
-:: e.g., C:\Program Files (x86)\Microsoft Visual Studio\2022\Community
+:: e.g., C:\Program Files (x86)\Microsoft Visual Studio\2022\Community.
 :: If this parameter is not set, the script attempts to find it.
 :: If the script cannot find it, modify and uncomment the line below:
 :: set "VS_INSTALL_DIR=C:\Program Files (x86)\Microsoft Visual Studio\2022\Community"
-
 
 setlocal DisableDelayedExpansion
 
@@ -47,6 +53,7 @@ echo %cmdcmdline%| find /i "%~0" >nul
 if not errorlevel 1 set "interactive=1"
 
 set "opt_include=0"
+set "opt_local=0"
 set "opt_quiet=0"
 
 for %%a in (%*) do (
@@ -67,6 +74,7 @@ set "arg=%arg:~1%"
 if not defined arg exit /b 0
 set "opt=%arg:~0,1%"
 if "%opt%"=="i" (set "opt_include=1"
+) else if "%opt%"=="l" (set "opt_local=1"
 ) else if "%opt%"=="q" (set "opt_quiet=1"
 ) else (
 	echo ERROR: Invalid option %opt%.
@@ -96,23 +104,16 @@ if not exist "%script_dir%\%config_file%" (
 )
 
 call :search_path
+if %errorlevel% equ 2 goto error_msvc_path
+if %errorlevel% equ 3 goto error_sdk_path
 if errorlevel 1 goto error_path
 
 set "MSVC_CRT_PATH=%VCToolsInstallDir%"
 set "MSVC_SDK_INCLUDE_PATH=%WindowsSdkDir%\Include\%WindowsSDKVersion%"
 set "MSVC_SDK_LIB_PATH=%WindowsSdkDir%\Lib\%WindowsSDKVersion%"
 
-if not exist "%MSVC_CRT_PATH%\include\stdarg.h" (
-	echo ERROR: MSVC library not found.
-	set "exit_code=3"
-	goto end
-)
-
-if not exist "%MSVC_SDK_INCLUDE_PATH%\um\windows.h" (
-	echo ERROR: Windows SDK library not found.
-	set "exit_code=3"
-	goto end
-)
+if not exist "%MSVC_CRT_PATH%\include\stdarg.h" goto error_msvc_path
+if not exist "%MSVC_SDK_INCLUDE_PATH%\um\windows.h" goto error_sdk_path
 
 set "msvc_dirpath=%script_dir%\%msvc_dirname%"
 
@@ -236,6 +237,7 @@ exit /b %exit_code%
 
 
 :search_path
+if "%opt_local%"=="1" goto search_path_2
 if "%VCToolsInstallDir%"=="" goto search_path_1
 if "%WindowsSdkDir%"=="" goto search_path_1
 if "%WindowsSDKVersion%"=="" goto search_path_1
@@ -247,16 +249,23 @@ set "my_vsinstalldir=%VS_INSTALL_DIR%"
 goto installdir_ok
 
 :search_path_2
-if not exist "Windows Kits\" goto search_path_3
-if not exist "VC\Tools\MSVC\" goto search_path_3
+set "msvc_crt_source=VC\Tools\MSVC"
+set "msvc_sdk_source=Windows Kits"
+
+set "search_code=2"
+if not exist "%msvc_crt_source%\" goto search_path_3
+set "search_code=3"
+if not exist "%msvc_sdk_source%\" goto search_path_3
+set "search_code=2"
 set "version="
-for /f %%i in ('dir VC\Tools\MSVC /b/a:d') do set "version=%%i"
+for /f %%i in ('dir "%msvc_crt_source%" /b/a:d') do set "version=%%i"
 if "%version%"=="" goto search_path_3
-set "VCToolsInstallDir=%script_dir%\VC\Tools\MSVC\%version%"
+set "VCToolsInstallDir=%script_dir%\%msvc_crt_source%\%version%"
+set "search_code=3"
 set "version="
-for /f %%i in ('dir "Windows Kits" /b/a:d') do set "version=%%i"
+for /f %%i in ('dir "%msvc_sdk_source%" /b/a:d') do set "version=%%i"
 if "%version%"=="" goto search_path_3
-set "WindowsSdkDir=%script_dir%\Windows Kits\%version%"
+set "WindowsSdkDir=%script_dir%\%msvc_sdk_source%\%version%"
 set "version="
 for /f %%i in ('dir "%WindowsSdkDir%\Include" /b/a:d') do set "version=%%i"
 if "%version%"=="" goto search_path_3
@@ -264,6 +273,8 @@ set "WindowsSDKVersion=%version%"
 exit /b 0
 
 :search_path_3
+if "%opt_local%"=="1" exit /b %search_code%
+:search_path_4
 call :get_vsinstalldir ^
 	HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\6487e3bb ^
 	InstallLocation
@@ -296,10 +307,14 @@ if "%my_vsinstalldir%"=="" exit /b 1
 exit /b 0
 
 
-:error_config
-echo(
-echo ERROR: Invalid configuration file on enabled data line %linenum%.
-set "exit_code=2"
+:error_msvc_path
+echo ERROR: MSVC library not found.
+set "exit_code=3"
+goto end
+
+:error_sdk_path
+echo ERROR: Windows SDK library not found.
+set "exit_code=3"
 goto end
 
 :error_path
@@ -307,6 +322,12 @@ echo The Visual Studio installation location could not be found.
 echo Please run this script from the "Developer Command Prompt for VS"
 echo using the Start menu shortcut.
 set "exit_code=3"
+goto end
+
+:error_config
+echo(
+echo ERROR: Invalid configuration file on enabled data line %linenum%.
+set "exit_code=2"
 goto end
 
 :error_copy
