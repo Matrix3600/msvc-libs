@@ -324,8 +324,8 @@ endif
 .DELETE_ON_ERROR:
 
 define CLEAN_DIR_RULE
-$(1): dir := $$(patsubst %/,%,$$(subst \,/,$(2)))
-$(1): wdir := $$(patsubst %\,%,$$(subst /,\,$(2)))
+$(1): dir := $$(patsubst /,,$$(subst \,/,$(2)))
+$(1): wdir := $$(patsubst \,,$$(subst /,\,$(2)))
 $(1):
 ifdef NATIVEWIN
 	if exist "$$(wdir)\" rd /s/q "$$(wdir)"
@@ -346,21 +346,24 @@ $(CRT_LIB_X86): $(CRT_LIB_X64)
 
 $(CRT_LIB_X64): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.VC.Tools.x86.x64" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
+		"Microsoft.VisualStudio.Component.VC.Tools.x86.x64" --dest .
 else
 	$(error Package needed: VC.Tools.x86.x64)
 endif
 
 $(CRT_LIB_ARM): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.VC.Tools.ARM" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
+		"Microsoft.VisualStudio.Component.VC.Tools.ARM" --dest .
 else
 	$(error Package needed: VC.Tools.ARM)
 endif
 
 $(CRT_LIB_ARM64): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.VC.Tools.ARM64" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
+		"Microsoft.VisualStudio.Component.VC.Tools.ARM64" --dest .
 else
 	$(error Package needed: VC.Tools.ARM64)
 endif
@@ -369,38 +372,45 @@ $(CRT_LIB_ATL_X86): $(CRT_LIB_ATL_X64)
 
 $(CRT_LIB_ATL_X64): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.VC.ATL" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
+		"Microsoft.VisualStudio.Component.VC.ATL" --dest .
 else
 	$(error Package needed: VC.ATL)
 endif
 
 $(CRT_LIB_ATL_ARM): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.VC.ATL.ARM" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
+		"Microsoft.VisualStudio.Component.VC.ATL.ARM" --dest .
 else
 	$(error Package needed: VC.ATL.ARM)
 endif
 
 $(CRT_LIB_ATL_ARM64): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.VC.ATL.ARM64" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
+		"Microsoft.VisualStudio.Component.VC.ATL.ARM64" --dest .
 else
 	$(error Package needed: VC.ATL.ARM64)
 endif
 
 $(SDK_ALL): ; $(CHECK_VERSION)
 ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) "Microsoft.VisualStudio.Component.Windows11SDK.22621" --dest .
+	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
+		"Microsoft.VisualStudio.Component.Windows11SDK.22621" --dest .
 else
 	$(error Package needed: Windows11SDK.22621)
 endif
 
+$(MSVC_LIBS_DIR)/: dir := $(patsubst /,,$(subst \,/,$(MSVC_LIBS_DIR)))
+$(MSVC_LIBS_DIR)/: wdir := $(patsubst \,,$(subst /,\,$(MSVC_LIBS_DIR)))
+
 $(MSVC_LIBS_DIR)/: $(PACKAGES) ; $(CHECK_VERSION)
 ifdef NATIVEWIN
-	if exist "$(MSVC_LIBS_DIR)\" rd /s/q "$(MSVC_LIBS_DIR)"
-	make_msvc-libs.cmd -iq
+	if exist "$(wdir)\" rd /s/q "$(wdir)"
+	make_msvc-libs.cmd -ilq
 else
-	rm -rf "$(MSVC_LIBS_DIR)"
+	rm -rf "$(dir)"
 	@chmod u+x make_msvc-libs.sh
-	./make_msvc-libs.sh -iq
+	./make_msvc-libs.sh -ilq
 endif
