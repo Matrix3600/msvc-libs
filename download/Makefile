@@ -37,15 +37,16 @@
 # contents of the library to build (see below).
 #
 # Parameters:
-#   default       intel or arm, depending on your machine architecture.
+#   default       (intel + sdk) or (arm + sdk), depending on your machine
+#                 architecture.
 #                 Implicit when no argument is specified.
-#   all           intel + arm + atl + atlarm
-#   intel         [VC.Tools.x86.x64] + sdk
+#   all           intel + arm + atl + atlarm + sdk
+#   intel         [VC.Tools.x86.x64]
 #   arm           arm32 + arm64
 #   x86           = intel
 #   x64           = intel
-#   arm32         [VC.Tools.ARM] + sdk
-#   arm64         [VC.Tools.ARM64] + sdk
+#   arm32         [VC.Tools.ARM]
+#   arm64         [VC.Tools.ARM64]
 #   atl           [VC.ATL] + intel
 #   atlarm        atlarm32 + atlarm64
 #   atl32         = atl
@@ -108,20 +109,20 @@ ifeq ($(OS),Windows_NT)
  endif
 endif
 
-.DEFAULT_GOAL = intel
+.DEFAULT_GOAL = intel_def
 ifeq ($(OS),Windows_NT)
  ifneq (,$(filter ARM%,$(PROCESSOR_ARCHITECTURE)))
-  .DEFAULT_GOAL = arm
+  .DEFAULT_GOAL = arm_def
  endif
 else
  ifneq (,$(filter aarch64% arm%,$(shell uname -m 2>$(DEVNUL))))
-  .DEFAULT_GOAL = arm
+  .DEFAULT_GOAL = arm_def
  endif
 endif
 
-PYTHON = python
+PYTHON = python3
 ifeq (,$(shell $(PYTHON) --version 2>$(DEVNUL)))
- PYTHON = python3
+ PYTHON = python
  ifeq (,$(shell $(PYTHON) --version 2>$(DEVNUL)))
   $(error ERROR: Python was not found. Please install it)
  endif
@@ -225,25 +226,21 @@ CRT_LIB_ATL_ARM64 = $(CRT_ROOT_DIR)/$(CRT_VERSION)/atlmfc/lib/arm64/
 
 SDK_ALL = $(call ESC_SPACE,Windows Kits/)
 
-DEFAULT_PACKAGES = $(CRT_LIB_X86) $(CRT_LIB_X64)
-ifeq (arm,$(.DEFAULT_GOAL))
- DEFAULT_PACKAGES = $(CRT_LIB_ARM) $(CRT_LIB_ARM64)
+DEFAULT_CRT_PACKAGES = $(CRT_LIB_X86) $(CRT_LIB_X64)
+ifeq (arm_def,$(.DEFAULT_GOAL))
+ DEFAULT_CRT_PACKAGES = $(CRT_LIB_ARM) $(CRT_LIB_ARM64)
 endif
 
 PACKAGES =
-ONLY_DL =
-NO_DL =
-MAKE_LIB = msvc-libs
-ifneq (,$(filter all intel x86 x64,$(MAKECMDGOALS)))
+ifneq (,$(filter all intel intel_def x86 x64 atl atl32 atl64,$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_X86) $(CRT_LIB_X64)
 endif
-ifneq (,$(filter all arm arm32,$(MAKECMDGOALS)))
+ifneq (,$(filter all arm arm_def arm32 atlarm atlarm32,$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_ARM)
 endif
-ifneq (,$(filter all arm arm64,$(MAKECMDGOALS)))
+ifneq (,$(filter all arm arm_def arm64 atlarm atlarm64,$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_ARM64)
 endif
-
 ifneq (,$(filter all atl atl32 atl64,$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_ATL_X86) $(CRT_LIB_ATL_X64)
 endif
@@ -253,24 +250,26 @@ endif
 ifneq (,$(filter all atlarm atlarm64,$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_ATL_ARM64)
 endif
+ifneq (,$(filter default,$(MAKECMDGOALS)))
+ PACKAGES += $(DEFAULT_CRT_PACKAGES)
+endif
 
+# All the above targets download the required CRT packages
+ifndef PACKAGES
+ PACKAGES += $(DEFAULT_CRT_PACKAGES)
+endif
+
+# The SDK is required to build the library
+PACKAGES += $(SDK_ALL)
+
+MAKE_LIB = msvc-libs
 ifneq (,$(filter onlydl,$(MAKECMDGOALS)))
  MAKE_LIB =
- ifndef PACKAGES
-  ONLY_DL = default
- endif
 endif
+NO_DL =
 ifneq (,$(filter nodl,$(MAKECMDGOALS)))
- ifndef PACKAGES
-  NO_DL = default
- else
-  NO_DL = $(PACKAGES)
- endif
+ NO_DL = 1
 endif
-ifndef PACKAGES
- PACKAGES = $(DEFAULT_PACKAGES)
-endif
-PACKAGES += $(SDK_ALL)
 
 # -----------------------------------------------------------------------------
 # Targets
@@ -279,16 +278,19 @@ PACKAGES += $(SDK_ALL)
 .PHONY: all intel arm x86 x64 arm32 arm64 \
   atl atlarm atl32 atl64 atlarm32 atlarm64 \
   sdk default onlydl nodl msvc-libs \
-  clean-all clean-dl clean-msvc clean-sdk clean clean-atl
+  clean-all clean-dl clean-msvc clean-sdk clean clean-atl \
+  intel_def arm_def
 
 default: $(.DEFAULT_GOAL)
 
-all: atl atlarm
-intel: $(CRT_LIB_X86) $(CRT_LIB_X64) sdk $(MAKE_LIB)
+all: atl atlarm sdk
+intel_def: intel sdk
+arm_def: arm sdk
+intel: $(CRT_LIB_X86) $(CRT_LIB_X64) $(MAKE_LIB)
 arm: arm32 arm64
 x86 x64: intel
-arm32: $(CRT_LIB_ARM) sdk $(MAKE_LIB)
-arm64: $(CRT_LIB_ARM64) sdk $(MAKE_LIB)
+arm32: $(CRT_LIB_ARM) $(MAKE_LIB)
+arm64: $(CRT_LIB_ARM64) $(MAKE_LIB)
 
 atl: $(CRT_LIB_ATL_X86) $(CRT_LIB_ATL_X64) intel
 atlarm: atlarm32 atlarm64
@@ -297,15 +299,6 @@ atlarm32: $(CRT_LIB_ATL_ARM) arm32
 atlarm64: $(CRT_LIB_ATL_ARM64) arm64
 
 sdk: $(SDK_ALL) $(MAKE_LIB)
-
-onlydl: $(ONLY_DL)
-ifneq (default,$(ONLY_DL))
-	@echo >$(DEVNUL)
-endif
-nodl: $(NO_DL)
-ifneq (default,$(NO_DL))
-	@echo >$(DEVNUL)
-endif
 
 msvc-libs: $(MSVC_LIBS_DIR)/
 
@@ -323,6 +316,26 @@ endif
 
 .DELETE_ON_ERROR:
 
+override undefine cmd_flag_prereq
+cmd_flag_prereq =
+ifeq (,$(filter-out onlydl nodl,$(MAKECMDGOALS)))
+ cmd_flag_prereq = default
+endif
+
+define CMD_FLAG_RULE
+$(1): $(cmd_flag_prereq)
+ifeq (,$(cmd_flag_prereq))
+	@echo >$(DEVNUL)
+endif
+endef
+
+$(eval $(call CMD_FLAG_RULE,onlydl))
+$(eval $(call CMD_FLAG_RULE,nodl))
+
+
+override undefine dir
+override undefine wdir
+
 define CLEAN_DIR_RULE
 $(1): dir := $$(patsubst /,,$$(subst \,/,$(2)))
 $(1): wdir := $$(patsubst \,,$$(subst /,\,$(2)))
@@ -332,7 +345,6 @@ ifdef NATIVEWIN
 else
 	rm -rf "$$(dir)"
 endif
-
 endef
 
 $(eval $(call CLEAN_DIR_RULE,clean,$(MSVC_LIBS_DIR)))
@@ -342,65 +354,29 @@ ifdef CRT_VERSION
 $(eval $(call CLEAN_DIR_RULE,clean-atl,$(ATL_DIR)))
 endif
 
+
+define DOWNLOAD_RULE
+$$($(1)): ; $$(CHECK_VERSION)
+ifndef NO_DL
+	$$(info )$$(info *** Downloading $(2) ...)$$(info )
+	$$(PYTHON) vsdownload.py $$(DOWNLOAD_OPTIONS) \
+		"Microsoft.VisualStudio.Component.$(2)" --dest .
+else
+	$$(error Package needed: $(2))
+endif
+endef
+
 $(CRT_LIB_X86): $(CRT_LIB_X64)
-
-$(CRT_LIB_X64): ; $(CHECK_VERSION)
-ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
-		"Microsoft.VisualStudio.Component.VC.Tools.x86.x64" --dest .
-else
-	$(error Package needed: VC.Tools.x86.x64)
-endif
-
-$(CRT_LIB_ARM): ; $(CHECK_VERSION)
-ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
-		"Microsoft.VisualStudio.Component.VC.Tools.ARM" --dest .
-else
-	$(error Package needed: VC.Tools.ARM)
-endif
-
-$(CRT_LIB_ARM64): ; $(CHECK_VERSION)
-ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
-		"Microsoft.VisualStudio.Component.VC.Tools.ARM64" --dest .
-else
-	$(error Package needed: VC.Tools.ARM64)
-endif
-
 $(CRT_LIB_ATL_X86): $(CRT_LIB_ATL_X64)
 
-$(CRT_LIB_ATL_X64): ; $(CHECK_VERSION)
-ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
-		"Microsoft.VisualStudio.Component.VC.ATL" --dest .
-else
-	$(error Package needed: VC.ATL)
-endif
+$(eval $(call DOWNLOAD_RULE,CRT_LIB_X64,VC.Tools.x86.x64))
+$(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM,VC.Tools.ARM))
+$(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM64,VC.Tools.ARM64))
+$(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_X64,VC.ATL))
+$(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM,VC.ATL.ARM))
+$(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM64,VC.ATL.ARM64))
+$(eval $(call DOWNLOAD_RULE,SDK_ALL,Windows11SDK.22621))
 
-$(CRT_LIB_ATL_ARM): ; $(CHECK_VERSION)
-ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
-		"Microsoft.VisualStudio.Component.VC.ATL.ARM" --dest .
-else
-	$(error Package needed: VC.ATL.ARM)
-endif
-
-$(CRT_LIB_ATL_ARM64): ; $(CHECK_VERSION)
-ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
-		"Microsoft.VisualStudio.Component.VC.ATL.ARM64" --dest .
-else
-	$(error Package needed: VC.ATL.ARM64)
-endif
-
-$(SDK_ALL): ; $(CHECK_VERSION)
-ifndef NO_DL
-	$(PYTHON) vsdownload.py $(DOWNLOAD_OPTIONS) \
-		"Microsoft.VisualStudio.Component.Windows11SDK.22621" --dest .
-else
-	$(error Package needed: Windows11SDK.22621)
-endif
 
 $(MSVC_LIBS_DIR)/: dir := $(patsubst /,,$(subst \,/,$(MSVC_LIBS_DIR)))
 $(MSVC_LIBS_DIR)/: wdir := $(patsubst \,,$(subst /,\,$(MSVC_LIBS_DIR)))
