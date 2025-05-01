@@ -276,10 +276,8 @@ else ifeq (arm64_def,$(.DEFAULT_GOAL))
  DEFAULT_CRT_PACKAGES = $(CRT_LIB_ARM64)
 endif
 
-# The SDK is required to build the library
-SDK_PACKAGES = $(SDK_LIB)
-
 PACKAGES =
+SDK_PACKAGES =
 ifneq (,$(filter all intel intel_def x86 x64 atl atl32 atl64,$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_X86) $(CRT_LIB_X64)
 endif
@@ -308,6 +306,9 @@ endif
 ifndef PACKAGES
  PACKAGES += $(DEFAULT_CRT_PACKAGES)
 endif
+
+# The SDK is required to build the library
+SDK_PACKAGES += $(SDK_LIB)
 
 PACKAGES += $(SDK_PACKAGES)
 
@@ -470,7 +471,7 @@ $(SDK_LIB_ARM32): wdir_arm32_inc := $(subst /,\,$(SDKARM32_INC_DIR))
 $(SDK_LIB_ARM32): wdir_inc := $(subst /,\,$(SDK_INC_DIR))
  endif
 
-$(SDK_LIB_ARM32): $(SDKARM32_LIB)
+$(SDK_LIB_ARM32): $(SDKARM32_LIB) $(SDK_LIB)
 	$(info )$(info *** Adding ARM32 files to SDK $(SDK_VERSION) ...)$(info )
  ifdef NATIVEWIN
 	xcopy /qsy "$(wdir_arm32_lib)\ucrt\arm\*" "$(wdir_lib)\ucrt\arm\" >nul
