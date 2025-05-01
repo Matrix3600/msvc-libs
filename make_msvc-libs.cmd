@@ -270,6 +270,8 @@ set "version="
 for /f %%i in ('dir "%WindowsSdkDir%\Include" /b/a:d') do set "version=%%i"
 if "%version%"=="" goto search_path_3
 set "WindowsSDKVersion=%version%"
+echo Using local source.
+echo(
 exit /b 0
 
 :search_path_3
@@ -298,6 +300,8 @@ if "%WindowsSDKVersion%"=="" exit /b 1
 if "%VCToolsInstallDir:~-1%"=="\" set "VCToolsInstallDir=%VCToolsInstallDir:~0,-1%"
 if "%WindowsSdkDir:~-1%"=="\" set "WindowsSdkDir=%WindowsSdkDir:~0,-1%"
 if "%WindowsSDKVersion:~-1%"=="\" set "WindowsSDKVersion=%WindowsSDKVersion:~0,-1%"
+echo Using Visual Studio environment.
+echo(
 exit /b 0
 
 :get_vsinstalldir

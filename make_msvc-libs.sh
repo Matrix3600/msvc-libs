@@ -280,6 +280,8 @@ search_path() {
 		VCToolsInstallDir=${VCToolsInstallDir%/}
 		WindowsSdkDir=${WindowsSdkDir%/}
 		WindowsSDKVersion=${WindowsSDKVersion%/}
+		echo "Using Visual Studio environment."
+		echo
 		return 0
 	fi
 
@@ -314,6 +316,9 @@ search_local_path() {
 	version=${version%/}
 	if [ -z "$version" ]; then return 3; fi
 	WindowsSDKVersion=$version
+
+	echo "Using local source."
+	echo
 
 	return 0
 }
