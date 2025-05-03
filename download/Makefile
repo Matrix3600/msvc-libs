@@ -36,41 +36,50 @@
 # Specify one or more arguments to the "make" command line to choose the
 # contents of the library to build (see below).
 #
-# Parameters:
-#   default       (intel + sdk), (arm32 + sdk) or (arm64 + sdk), depending on
-#                 your machine architecture. Implicit when no argument is
-#                 specified.
-#   all           intel + arm + atl + atlarm + sdk
-#   intel         [VC.Tools.x86.x64]
-#   arm           arm32 + arm64
-#   x86           = intel
-#   x64           = intel
-#   arm32         [VC.Tools.ARM]
-#   arm64         [VC.Tools.ARM64]
-#   atl           [VC.ATL] + intel
-#   atlarm        atlarm32 + atlarm64
-#   atl32         = atl
-#   atl64         = atl
-#   atlarm32      [VC.ATL.ARM] + arm32
-#   atlarm64      [VC.ATL.ARM64] + arm64
-#   sdk           [Windows11SDK.22621] (default version)
-#   onlydl        Download only, do not create the standalone library.
-#   nodl          Do not download anything. Stop if any package is missing.
-#   msvc-libs     Build the repackaged standalone library (msvc-libs
-#                 directory). Implicit if "onlydl" is not specified.
-#   sdkver=xxxxx  Version of SDK package (default: 22621).
-#   lang=xx[-yy]  Preferred language code for packages available in multiple
-#                 languages (default: LANG environment variable, or "en").
-#   clean         Delete the "msvc-libs" directory of created standalone
-#                 library, do not delete any downloaded files.
-#   clean-all     Delete all the directories created by this makefile.
-#   clean-dl      Delete all the download directories ("VC" and
-#                 "Windows Kits").
-#   clean-msvc    Delete the "VC" directory.
-#   clean-sdk     Delete the "Windows Kits" directory.
-#   clean-atl     Delete the ATL download directory.
+define HELP
+Usage: make [<parameter>...]
+
+Parameters to choose which packages to download:
+  default       (intel + sdk), (arm32 + sdk) or (arm64 + sdk), depending on
+                your machine architecture. Implicit when no argument is
+                specified.
+  all           intel + arm + atl + atlarm + sdk
+  intel         [VC.Tools.x86.x64]
+  arm           arm32 + arm64
+  x86           = intel
+  x64           = intel
+  arm32         [VC.Tools.ARM]
+  arm64         [VC.Tools.ARM64]
+  atl           [VC.ATL] + intel
+  atlarm        atlarm32 + atlarm64
+  atl32         = atl
+  atl64         = atl
+  atlarm32      [VC.ATL.ARM] + arm32
+  atlarm64      [VC.ATL.ARM64] + arm64
+  sdk           [Windows11SDK.22621] (default version)
+
+  sdkver=xxxxx  Version of SDK package (default: 22621).
+  lang=xx[-yy]  Preferred language code for packages available in multiple
+                languages (default: LANG environment variable, or "en").
+
+The downloaded packages are indicated in brackets.
+
+Other parameters:
+  help          Print this help message.
+  onlydl        Download only, do not create the standalone library.
+  nodl          Do not download anything. Stop if any package is missing.
+  msvc-libs     Build the repackaged standalone library (msvc-libs
+                directory). Implicit if "onlydl" is not specified.
+  clean         Delete the "msvc-libs" directory of created standalone
+                library, do not delete any downloaded files.
+  clean-all     Delete all the directories created by this makefile.
+  clean-dl      Delete all the download directories ("VC" and
+                "Windows Kits").
+  clean-msvc    Delete the "VC" directory.
+  clean-sdk     Delete the "Windows Kits" directory.
+  clean-atl     Delete the ATL download directory.
+endef
 #
-# The downloaded packages are indicated in brackets.
 # The unversioned packages are always the latest available.
 # The standalone library is always created at the end, unless the "onlydl"
 # parameter is specified.
@@ -327,8 +336,8 @@ endif
 
 .PHONY: all intel arm x86 x64 arm32 arm64 \
   atl atlarm atl32 atl64 atlarm32 atlarm64 \
-  sdk default onlydl nodl msvc-libs \
-  clean-all clean-dl clean-msvc clean-sdk clean clean-atl \
+  sdk default onlydl nodl msvc-libs help \
+  clean clean-all clean-dl clean-msvc clean-sdk clean-atl \
   intel_def arm32_def arm64_def
 
 default: $(.DEFAULT_GOAL)
@@ -355,6 +364,9 @@ msvc-libs: $(MSVC_LIBS_DIR)/
 
 clean-all: clean clean-dl
 clean-dl: clean-msvc clean-sdk
+
+help:
+	@:$(info $(HELP))
 
 # -----------------------------------------------------------------------------
 # Rules
@@ -383,7 +395,7 @@ endif
 define CMD_FLAG_RULE
 $(1): $(cmd_flag_prereq)
 ifeq (,$(cmd_flag_prereq))
-	@echo >$(DEVNUL)
+	@:
 endif
 endef
 
