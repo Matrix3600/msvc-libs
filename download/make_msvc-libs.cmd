@@ -36,10 +36,10 @@
 ::
 
 :: Visual Studio installation directory (if applicable),
-:: e.g., C:\Program Files (x86)\Microsoft Visual Studio\2022\Community.
+:: e.g., C:\Program Files\Microsoft Visual Studio\2022\Community.
 :: If this parameter is not set, the script attempts to find it.
 :: If the script cannot find it, modify and uncomment the line below:
-:: set "VS_INSTALL_DIR=C:\Program Files (x86)\Microsoft Visual Studio\2022\Community"
+:: set "VS_INSTALL_DIR=C:\Program Files\Microsoft Visual Studio\2022\Community"
 
 setlocal DisableDelayedExpansion
 
@@ -278,7 +278,7 @@ exit /b 0
 if "%opt_local%"=="1" exit /b %search_code%
 :search_path_4
 call :get_vsinstalldir ^
-	HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\6487e3bb ^
+	HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall ^
 	InstallLocation
 if %errorlevel% neq 0 exit /b 1
 
@@ -306,7 +306,8 @@ exit /b 0
 
 :get_vsinstalldir
 set my_vsinstalldir=
-for /f "tokens=2*" %%i in ('reg query "%~1" /v "%~2" 2^>nul') do set "my_vsinstalldir=%%~j"
+for /f "tokens=2*" %%i in ('^(reg query "%~1" /s /v "%~2" ^| ^
+	find "Microsoft Visual Studio"^) 2^>nul') do set "my_vsinstalldir=%%~j"
 if "%my_vsinstalldir%"=="" exit /b 1
 exit /b 0
 
