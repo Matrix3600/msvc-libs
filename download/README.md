@@ -51,7 +51,8 @@ Configuration
 -------------
 
 You can select the downloaded packages by specifying arguments in the `make`
-command line. See the description at the beginning of the Makefile for details.
+command line. See the description at the beginning of the Makefile for details,
+or run `make help`.
 
 You can also precisely filter which directories you want to include in the
 library by editing the `make_msvc-libs_conf.txt` configuration file of the
