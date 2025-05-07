@@ -42,7 +42,6 @@
 :: set "VS_INSTALL_DIR=C:\Program Files\Microsoft Visual Studio\2022\Community"
 
 setlocal DisableDelayedExpansion
-
 set "exit_code=0"
 
 set "msvc_dirname=msvc-libs"
@@ -51,6 +50,8 @@ set "config_file=make_msvc-libs_conf.txt"
 set "interactive="
 echo %cmdcmdline%| find /i "%~0" >nul
 if not errorlevel 1 set "interactive=1"
+
+echo(
 
 set "opt_include=0"
 set "opt_local=0"
@@ -95,7 +96,16 @@ if "%script_dir:~-1%"=="\" set "script_dir=%script_dir:~0,-1%"
 cd /d "%script_dir%"
 if errorlevel 1 set "exit_code=10" & goto end
 
-echo(
+set "pwsh_exec=pwsh.exe"
+"%pwsh_exec%" -version >nul 2>&1
+if %errorlevel% equ 0 goto pwsh_ok
+set "pwsh_exec=powershell.exe"
+set "pwsh_ver=0"
+for /f %%i in ('%pwsh_exec% -c "$PSVersionTable.PSVersion.Major" 2^>nul') do (
+	set /a "pwsh_ver=%%i" 2>nul
+)
+if %pwsh_ver% lss 3 goto error_powershell
+:pwsh_ok
 
 if not exist "%script_dir%\%config_file%" (
 	echo ERROR: Configuration file not found: "%config_file%".
@@ -204,15 +214,7 @@ endlocal
 
 popd
 
-set "pwsh_exec=pwsh.exe"
-set "pwsh_version=7"
-"%pwsh_exec%" -version >nul 2>&1
-if %errorlevel% equ 0 goto pwsh_ok
-set "pwsh_exec=powershell.exe"
-set "pwsh_version=5"
-:pwsh_ok
-
-set args="%msvc_dirpath%" "%pwsh_version%"
+set args="%msvc_dirpath%"
 set args=%args:"=\"%
 set args=%args:'=''%
 
@@ -257,22 +259,43 @@ if not exist "%msvc_crt_source%\" goto search_path_3
 set "search_code=3"
 if not exist "%msvc_sdk_source%\" goto search_path_3
 set "search_code=2"
-set "version="
-for /f %%i in ('dir "%msvc_crt_source%" /b/a:d') do set "version=%%i"
+call :get_latest_version_dirname version "%msvc_crt_source%"
 if "%version%"=="" goto search_path_3
 set "VCToolsInstallDir=%script_dir%\%msvc_crt_source%\%version%"
 set "search_code=3"
-set "version="
-for /f %%i in ('dir "%msvc_sdk_source%" /b/a:d') do set "version=%%i"
+call :get_latest_version_dirname version "%msvc_sdk_source%"
 if "%version%"=="" goto search_path_3
 set "WindowsSdkDir=%script_dir%\%msvc_sdk_source%\%version%"
-set "version="
-for /f %%i in ('dir "%WindowsSdkDir%\Include" /b/a:d') do set "version=%%i"
+call :get_latest_version_dirname version "%WindowsSdkDir%\Include"
 if "%version%"=="" goto search_path_3
 set "WindowsSDKVersion=%version%"
 echo Using local source.
 echo(
 exit /b 0
+
+:get_latest_version_dirname <out_var_name> <path>
+setlocal EnableDelayedExpansion
+set "v="
+for /f "delims=" %%i in ('dir "%~2" /b/a:d') do (
+	set "chk=" & for /f "delims=0123456789." %%j in ("%%i") do set "chk=%%j"
+	if not defined chk (
+		call :cmp_version "%%i" "!v!"
+		if !errorlevel! equ 0 set "v=%%i"
+	)
+)
+endlocal & set "%~1=%v%"
+exit /b 0
+:cmp_version <v1> <v2>
+if "%~1"=="" exit /b 1
+if "%~2"=="" exit /b 0
+set "v1=0" & set "v2=0"
+for /f "tokens=1* delims=." %%i in ("%~1") do (set "v1=%%i" & set "r1=%%j")
+for /f "tokens=1* delims=." %%i in ("%~2") do (set "v2=%%i" & set "r2=%%j")
+if %v1% neq 0 for /f "tokens=* delims=0" %%i in ("%v1%") do set "v1=%%i"
+if %v2% neq 0 for /f "tokens=* delims=0" %%i in ("%v2%") do set "v2=%%i"
+if %v1% lss %v2% (exit /b 1) else if %v1% gtr %v2% exit /b 0
+call :cmp_version "%r1%" "%r2%"
+exit /b %errorlevel%
 
 :search_path_3
 if "%opt_local%"=="1" exit /b %search_code%
@@ -311,6 +334,11 @@ for /f "tokens=2*" %%i in ('^(reg query "%~1" /s /v "%~2" ^| ^
 if "%my_vsinstalldir%"=="" exit /b 1
 exit /b 0
 
+
+:error_powershell
+echo ERROR: This script requires PowerShell 3 or higher.
+set "exit_code=20"
+goto end
 
 :error_msvc_path
 echo ERROR: MSVC library not found.
@@ -367,18 +395,14 @@ param (
 	# Root directory
 	[Parameter(Mandatory=$true, Position=0)]
 	[string]$rootDirectory,
-
-	# powerShellVersion
-	[Parameter(Mandatory=$true, Position=1)]
-	[int]$powerShellVersion
 )
 #>
 
 $ErrorActionPreference = 'Stop'
+$powerShellVersion = $PSVersionTable.PSVersion.Major
 
-if ($Args.Length -ne 2) { exit 20 }
+if ($Args.Length -ne 1) { exit 21 }
 $rootDirectory = $Args[0]
-$powerShellVersion = $Args[1]
 
 Write-Host
 

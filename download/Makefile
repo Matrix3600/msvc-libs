@@ -149,6 +149,26 @@ else
  endif
 endif
 
+# -----------------------------------------------------------------------------
+
+# Escape spaces
+override undefine empty
+override undefine space
+empty :=
+space := $(empty) $(empty)
+ESC_SPACE = $(subst $(space),\ ,$(1))
+
+# $(intcmp ...) function requires Make 4.4+ (2022-10).
+# Alternative for older versions
+ifdef NATIVEWIN
+ INTCMP = $(shell if $(or $(strip $(1)),0) lss $(or $(strip $(2)),0) \
+  (echo;$(3)) else echo;$(4))
+else
+ INTCMP = $(shell [ "$(1)" -lt "$(2)" ] && echo "$(3)" || echo "$(4)")
+endif
+
+# -----------------------------------------------------------------------------
+
 PYTHON = python3
 ifeq (,$(shell $(PYTHON) --version 2>$(DEVNUL)))
  PYTHON = python
@@ -156,6 +176,19 @@ ifeq (,$(shell $(PYTHON) --version 2>$(DEVNUL)))
   $(error ERROR: Python was not found. Please install it)
  endif
 endif
+
+ifdef NATIVEWIN
+ PWRSHELL = pwsh.exe
+ ifeq (,$(shell $(PWRSHELL) --version 2>nul))
+  PWRSHELL = powershell.exe
+  override undefine version
+  version = $(or $(shell \
+   $(PWRSHELL) -c "$$PSVersionTable.PSVersion.Major" 2>nul),0)
+  ifeq (,$(call INTCMP,$(version),3,,1))
+   $(error ERROR: PowerShell 3 or higher is required)
+  endif
+ endif 
+endif 
 
 VSDOWNLOAD_SCRIPT = vsdownload.py
 ifdef NATIVEWIN
@@ -178,23 +211,6 @@ endif
 ifeq (,$(wildcard $(MSVC_LIBS_CONFIG)))
  $(error ERROR: The configuration file "$(MSVC_LIBS_CONFIG)" was not found. \
   Please place it in this directory)
-endif
-
-# -----------------------------------------------------------------------------
-
-# Escape spaces
-override undefine empty
-override undefine space
-empty :=
-space := $(empty) $(empty)
-ESC_SPACE = $(subst $(space),\ ,$(1))
-
-# $(intcmp ...) function requires Make 4.4+ (2022-10).
-# Alternative for older versions
-ifdef NATIVEWIN
- INTCMP = $(shell if "$(1)" lss "$(2)" (echo;$(3)) else echo;$(4))
-else
- INTCMP = $(shell [ "$(1)" -lt "$(2)" ] && echo "$(3)" || echo "$(4)")
 endif
 
 # -----------------------------------------------------------------------------
@@ -221,9 +237,12 @@ override undefine gdv_version
 define GET_DIR_VERSION
 ifdef NATIVEWIN
  gdv_wdir := $$(subst /,\,$(1))
- gdv_version := $$(lastword $$(shell dir "$$(gdv_wdir)" /b/a:d 2>nul))
+ gdv_version := $$(shell $$(PWRSHELL) -c "Get-ChildItem '$$(gdv_wdir)' \
+  -Directory -Name | Where-Object { $$$$_ -match '^\d+(\.\d+){0,3}$$$$' } | \
+  Sort-Object { $$$$($$$$_ -replace '^\d+$$$$','$$$$&.0') -as [version] } | \
+  Select-Object -Last 1" 2>nul)
 else
- gdv_version := $$(shell { cd "$(1)" && ls -d -- */ | tail -n 1; \
+ gdv_version := $$(shell { cd "$(1)" && ls -dv -- */ | tail -n 1; \
   } 2>/dev/null)
  gdv_version := $$(gdv_version:%/=%)
 endif
