@@ -6,6 +6,9 @@ Studio library.
 
 They run on Windows or Linux.
 
+If Visual Studio is not installed, the library files can be downloaded from
+Microsoft.
+
 The standalone MSVC/SDK library is useful for compiling projects on Linux 
 targeting Windows.
 
