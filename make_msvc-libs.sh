@@ -88,7 +88,7 @@ if [ $? != 0 ]; then exit_script 10; fi
 echo
 
 if [ ! -f "$script_dir/$config_file" ]; then
-	echo "ERROR: Configuration file not found: $config_file ."
+	echo "ERROR: Configuration file not found: \"$config_file\"."
 	exit_script 2
 fi
 
@@ -182,7 +182,7 @@ do
 		if [ -n "$source" ]; then source="/${source//..}"; fi	# Remove ..
 
 		if [ -d "$sourcedir$source" ]; then
-			echo Copying "[$type]$source$subdirs" to "$destdir$source" ...
+			echo Copying \"[$type]$source$subdirs\" to \"$destdir$source\" ...
 
 			mkdir -p "$destdir$source"
 			if [ $? != 0 ]; then error_copy; fi
@@ -198,11 +198,16 @@ do
 			fi
 			if [ $? != 0 ]; then error_copy; fi
 		elif [ "$opt_include" = 0 ]; then
-			echo Directory not found "[$type]$source".
+			echo Directory not found \"[$type]$source\".
 			error_copy;
 		fi	
 	fi
 done 3<"$script_dir/$config_file"
+
+{
+	echo CRT ${VCToolsInstallDir##*/}
+	echo SDK $WindowsSDKVersion
+} >version.txt
 
 
 #
@@ -299,19 +304,19 @@ search_local_path() {
 	
 	if [ ! -d "$msvc_crt_source" ]; then return 2; fi
 	if [ ! -d "$msvc_sdk_source" ]; then return 3; fi
-	local version="$({ cd "$msvc_crt_source" && ls -d -- */ | tail -n 1; } \
+	local version="$({ cd "$msvc_crt_source" && ls -dv -- */ | tail -n 1; } \
 		2>/dev/null)"
 	version=${version%/}
 	if [ -z "$version" ]; then return 2; fi
 	VCToolsInstallDir="$script_dir/$msvc_crt_source/$version"
 
-	version="$({ cd "$msvc_sdk_source" && ls -d -- */ | tail -n 1; } \
+	version="$({ cd "$msvc_sdk_source" && ls -dv -- */ | tail -n 1; } \
 		2>/dev/null)"
 	version=${version%/}
 	if [ -z "$version" ]; then return 3; fi
 	WindowsSdkDir="$script_dir/$msvc_sdk_source/$version"
 
-	version="$({ cd "$msvc_sdk_source/$version/Include" && ls -d -- */ | \
+	version="$({ cd "$msvc_sdk_source/$version/Include" && ls -dv -- */ | \
 		tail -n 1; } 2>/dev/null)"
 	version=${version%/}
 	if [ -z "$version" ]; then return 3; fi

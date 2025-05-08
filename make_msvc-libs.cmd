@@ -210,6 +210,13 @@ for /f "tokens=1-3 usebackq eol=# delims=|" %%i in (
 	)
 )
 
+set "version="
+for /f "delims=" %%D in ("%VCToolsInstallDir%") do set "version=%%~nxD"
+(
+	echo CRT %version%
+	echo SDK %WindowsSDKVersion%
+) >version.txt
+
 endlocal
 
 popd
