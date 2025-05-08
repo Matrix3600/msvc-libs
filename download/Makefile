@@ -43,7 +43,7 @@ Parameters to choose which packages to download:
   default       (intel + sdk), (arm32 + sdk) or (arm64 + sdk), depending on
                 your machine architecture. Implicit when no argument is
                 specified.
-  all           intel + arm + atl + atlarm + sdk
+  all           intel + arm64 + atl + atlarm64 + sdk (arm32 not included)
   intel         [VC.Tools.x86.x64]
   arm           arm32 + arm64
   x86           = intel
@@ -56,9 +56,10 @@ Parameters to choose which packages to download:
   atl64         = atl
   atlarm32      [VC.ATL.ARM] + arm32
   atlarm64      [VC.ATL.ARM64] + arm64
-  sdk           [Windows11SDK.22621] (default version)
+  sdk           [Windows11SDK.26100] (default version)
 
-  sdkver=xxxxx  Version of SDK package (default: 22621).
+  sdkver=xxxxx  Version of SDK package (18362,19041,20348,22000,22621,26100)
+                (default: 26100).
   lang=xx[-yy]  Preferred language code for packages available in multiple
                 languages (default: LANG environment variable, or "en").
 
@@ -114,7 +115,7 @@ ifdef sdkver
  SDK_VERSION := $(sdkver)
  override undefine sdkver
 else
- SDK_VERSION = 22621
+ SDK_VERSION = 26100
 endif
 
 # -----------------------------------------------------------------------------
@@ -361,7 +362,7 @@ endif
 
 default: $(.DEFAULT_GOAL)
 
-all: atl atlarm sdk
+all: atl atlarm64 sdk
 intel_def: intel sdk
 arm32_def: arm32 sdk
 arm64_def: arm64 sdk
