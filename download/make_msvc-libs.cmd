@@ -210,11 +210,18 @@ for /f "tokens=1-3 usebackq eol=# delims=|" %%i in (
 	)
 )
 
-set "version="
-for /f "delims=" %%D in ("%VCToolsInstallDir%") do set "version=%%~nxD"
+set "crt_version="
+for /f "delims=" %%D in ("%VCToolsInstallDir%") do set "crt_version=%%~nxD"
+
+set "sdk_version=%WindowsSDKVersion%"
+set "p=(Get-Item -LiteralPath"
+set "p=%p% \"%WindowsSdkDir%\bin\%WindowsSDKVersion%\x64\certmgr.exe\")"
+set "p=%p%.VersionInfo.ProductVersion"
+for /f %%i in ('%pwsh_exec% -c "%p%" 2^>nul') do set "sdk_version=%%i"
+
 (
-	echo CRT %version%
-	echo SDK %WindowsSDKVersion%
+	echo CRT %crt_version%
+	echo SDK %sdk_version%
 ) >version.txt
 
 endlocal
