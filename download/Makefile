@@ -66,11 +66,9 @@ Parameters to choose which packages to download:
 The downloaded packages are indicated in brackets.
 
 Other parameters:
-  help          Print this help message.
+  help          Display this help message.
   onlydl        Download only, do not create the standalone library.
   nodl          Do not download anything. Stop if any package is missing.
-  msvc-libs     Build the repackaged standalone library (msvc-libs
-                directory). Implicit if "onlydl" is not specified.
   clean         Delete the "msvc-libs" directory of created standalone
                 library, do not delete any downloaded files.
   clean-all     Delete all the directories created by this makefile.
@@ -188,8 +186,8 @@ ifdef NATIVEWIN
   ifeq (,$(call INTCMP,$(version),3,,1))
    $(error ERROR: PowerShell 3 or higher is required)
   endif
- endif 
-endif 
+ endif
+endif
 
 VSDOWNLOAD_SCRIPT = vsdownload.py
 ifdef NATIVEWIN
@@ -310,7 +308,7 @@ SDK_PACKAGES =
 ifneq (,$(filter all intel intel_def x86 x64 atl atl32 atl64,$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_X86) $(CRT_LIB_X64)
 endif
-ifneq (,$(filter all arm arm32 arm32_def atlarm atlarm32,$(MAKECMDGOALS)))
+ifneq (,$(filter arm arm32 arm32_def atlarm atlarm32,$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_ARM32)
  SDK_PACKAGES += $(SDK_LIB_ARM32)
 endif
@@ -320,7 +318,7 @@ endif
 ifneq (,$(filter all atl atl32 atl64,$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_ATL_X86) $(CRT_LIB_ATL_X64)
 endif
-ifneq (,$(filter all atlarm atlarm32,$(MAKECMDGOALS)))
+ifneq (,$(filter atlarm atlarm32,$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_ATL_ARM32)
  SDK_PACKAGES += $(SDK_LIB_ARM32)
 endif
@@ -341,46 +339,50 @@ SDK_PACKAGES += $(SDK_LIB)
 
 PACKAGES += $(SDK_PACKAGES)
 
-MAKE_LIB = msvc-libs
-ifneq (,$(filter onlydl,$(MAKECMDGOALS)))
- MAKE_LIB =
-endif
-NO_DL =
-ifneq (,$(filter nodl,$(MAKECMDGOALS)))
- NO_DL = 1
-endif
-
 # -----------------------------------------------------------------------------
 # Targets
 # -----------------------------------------------------------------------------
 
-.PHONY: all intel arm x86 x64 arm32 arm64 \
-  atl atlarm atl32 atl64 atlarm32 atlarm64 \
-  sdk default onlydl nodl msvc-libs help \
-  clean clean-all clean-dl clean-msvc clean-sdk clean-atl \
-  intel_def arm32_def arm64_def
+override undefine target_list
+target_list = all intel arm x86 x64 arm32 arm64 atl atlarm atl32 atl64 \
+ atlarm32 atlarm64 sdk default intel_def arm32_def arm64_def
+$(foreach target,$(target_list),$(eval END_$(target)=))
 
-default: $(.DEFAULT_GOAL)
+ifeq (,$(filter onlydl,$(MAKECMDGOALS)))
+ END_$(or $(lastword $(filter $(target_list),$(MAKECMDGOALS))),\
+  $(.DEFAULT_GOAL)) = $(MSVC_LIBS_DIR)/
+endif
+NO_DL := $(if $(filter nodl,$(MAKECMDGOALS)),1)
 
-all: atl atlarm64 sdk
-intel_def: intel sdk
-arm32_def: arm32 sdk
-arm64_def: arm64 sdk
-intel: $(CRT_LIB_X86) $(CRT_LIB_X64) $(MAKE_LIB)
-arm: arm32 arm64
-x86 x64: intel
-arm32: $(CRT_LIB_ARM32) $(MAKE_LIB)
-arm64: $(CRT_LIB_ARM64) $(MAKE_LIB)
+INTEL_PACKAGES = $(CRT_LIB_X86) $(CRT_LIB_X64)
+ATL_PACKAGES = $(CRT_LIB_ATL_X86) $(CRT_LIB_ATL_X64) $(INTEL_PACKAGES)
+ATLARM32_PACKAGES = $(CRT_LIB_ATL_ARM32) $(CRT_LIB_ARM32)
+ATLARM64_PACKAGES = $(CRT_LIB_ATL_ARM64) $(CRT_LIB_ARM64)
 
-atl: $(CRT_LIB_ATL_X86) $(CRT_LIB_ATL_X64) intel
-atlarm: atlarm32 atlarm64
-atl32 atl64: atl
-atlarm32: $(CRT_LIB_ATL_ARM32) arm32
-atlarm64: $(CRT_LIB_ATL_ARM64) arm64
+.PHONY: $(target_list) onlydl nodl help \
+ clean clean-all clean-dl clean-msvc clean-sdk clean-atl
 
-sdk: $(SDK_PACKAGES) $(MAKE_LIB)
+default: $(.DEFAULT_GOAL) $(END_default)
 
-msvc-libs: $(MSVC_LIBS_DIR)/
+all: $(ATL_PACKAGES) $(ATLARM64_PACKAGES) $(SDK_PACKAGES) $(END_all)
+intel_def: $(INTEL_PACKAGES) $(SDK_PACKAGES) $(END_intel_def)
+arm32_def: $(CRT_LIB_ARM32) $(SDK_PACKAGES) $(END_arm32_def)
+arm64_def: $(CRT_LIB_ARM64) $(SDK_PACKAGES) $(END_arm64_def)
+intel: $(INTEL_PACKAGES) $(END_intel)
+arm: $(CRT_LIB_ARM32) $(CRT_LIB_ARM64) $(END_arm)
+x86: $(INTEL_PACKAGES) $(END_x86)
+x64: $(INTEL_PACKAGES) $(END_x64)
+arm32: $(CRT_LIB_ARM32) $(END_arm32)
+arm64: $(CRT_LIB_ARM64) $(END_arm64)
+
+atl: $(ATL_PACKAGES) $(END_atl)
+atlarm: $(ATLARM32_PACKAGES) $(ATLARM64_PACKAGES) $(END_atlarm)
+atl32: $(ATL_PACKAGES) $(END_atl32)
+atl64: $(ATL_PACKAGES) $(END_atl64)
+atlarm32: $(ATLARM32_PACKAGES) $(END_atlarm32)
+atlarm64: $(ATLARM64_PACKAGES) $(END_atlarm64)
+
+sdk: $(SDK_PACKAGES) $(END_sdk)
 
 clean-all: clean clean-dl
 clean-dl: clean-msvc clean-sdk
@@ -407,16 +409,10 @@ SDKARM32_PACKAGE = Windows$(sdkwinver)SDK.$(SDKARM32_VERSION)
 .DELETE_ON_ERROR:
 
 override undefine cmd_flag_prereq
-cmd_flag_prereq =
-ifeq (,$(filter-out onlydl nodl,$(MAKECMDGOALS)))
- cmd_flag_prereq = default
-endif
+cmd_flag_prereq := $(if $(filter-out onlydl nodl,$(MAKECMDGOALS)),,default)
 
 define CMD_FLAG_RULE
-$(1): $(cmd_flag_prereq)
-ifeq (,$(cmd_flag_prereq))
-	@:
-endif
+$(1): $(cmd_flag_prereq) ; $(if $(cmd_flag_prereq),,@:)
 endef
 
 $(eval $(call CMD_FLAG_RULE,onlydl))

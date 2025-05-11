@@ -41,9 +41,9 @@
 # If the source files are in a custom location, you must specify their path and
 # the version of the tools (MSVC and SDK). In this case, modify and uncomment
 # the three variables below (all three):
-# VCToolsInstallDir="<custom_location_of_MSVC>/VC/Tools/MSVC/14.43.34808"
+# VCToolsInstallDir="<custom_location_of_MSVC>/VC/Tools/MSVC/14.44.35128"
 # WindowsSdkDir="<custom_location_of_SDK>/Windows Kits/10"
-# WindowsSDKVersion="10.0.22621.0"
+# WindowsSDKVersion="10.0.26100.0"
 
 
 main() {

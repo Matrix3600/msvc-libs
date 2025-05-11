@@ -10,9 +10,9 @@
 # <source_directory>: Relative path of the directory to copy.
 #
 # Example of source directory root locations:
-# CRT:          Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.43.34808
-# SDK_INCLUDE:  Windows Kits/10/Include/10.0.22621.0
-# SDK_LIB:      Windows Kits/10/Lib/10.0.22621.0
+# CRT:          Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35128
+# SDK_INCLUDE:  Windows Kits/10/Include/10.0.26100.0
+# SDK_LIB:      Windows Kits/10/Lib/10.0.26100.0
 #
 # Lines beginning with a hash mark # are disabled.
 #
