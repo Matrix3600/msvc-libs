@@ -204,9 +204,14 @@ do
 	fi
 done 3<"$script_dir/$config_file"
 
+sdk_ver_bin="$WindowsSdkDir/bin/$WindowsSDKVersion/x64/certmgr.exe"
+sdk_version=$({ strings -del "$sdk_ver_bin" | grep -A1 'ProductVersion' | \
+    tail -n 1; } 2>/dev/null)
+if [ -z "$sdk_version" ]; then sdk_version=$WindowsSDKVersion; fi
+
 {
 	echo CRT ${VCToolsInstallDir##*/}
-	echo SDK $WindowsSDKVersion
+	echo SDK $sdk_version
 } >version.txt
 
 
