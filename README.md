@@ -180,9 +180,11 @@ If you use a makefile:
 
 	# Linker
 	# For x86
-	export LIB = $(MSVC_CRT_PATH)/lib/x86;$(MSVC_SDK_LIB_PATH)/um/x86
+	export LIB = $(MSVC_CRT_PATH)/lib/x86;$(MSVC_SDK_LIB_PATH)/um/x86;$\
+		$(MSVC_SDK_LIB_PATH)/ucrt/x86
 	# For x64
-	export LIB = $(MSVC_CRT_PATH)/lib/x64;$(MSVC_SDK_LIB_PATH)/um/x64
+	export LIB = $(MSVC_CRT_PATH)/lib/x64;$(MSVC_SDK_LIB_PATH)/um/x64;$\
+		$(MSVC_SDK_LIB_PATH)/ucrt/x64
 
 
 If you use a shell script:
@@ -200,8 +202,10 @@ If you use a shell script:
 	# Linker
 	# For x86
 	export LIB="$MSVC_CRT_PATH/lib/x86;$MSVC_SDK_LIB_PATH/um/x86"
+	LIB+=";$MSVC_SDK_LIB_PATH/ucrt/x86"
 	# For x64
 	export LIB="$MSVC_CRT_PATH/lib/x64;$MSVC_SDK_LIB_PATH/um/x64"
+	LIB+=";$MSVC_SDK_LIB_PATH/ucrt/x64"
 
 The `INCLUDE` variable contains the search paths of the header files used by
 the compiler, separated by semicolons.  
