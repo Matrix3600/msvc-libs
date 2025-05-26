@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 #
 # Copyright (c) 2019 Martin Storsjo
 #
@@ -245,6 +245,9 @@ def setPackageSelection(args, packages):
             for v in sorted(versions):
                 print("    " + v)
             sys.exit(1)
+
+    if args.with_wdk_installers is not None:
+        args.package.append("Component.Microsoft.Windows.DriverKit.BuildTools")
 
 def lowercaseIgnores(args):
     ignore = []
