@@ -212,6 +212,7 @@ for /f "tokens=1-3 usebackq eol=# delims=|" %%i in (
 
 set "crt_version="
 for /f "delims=" %%D in ("%VCToolsInstallDir%") do set "crt_version=%%~nxD"
+call :get_crt_version crt_version
 
 set "sdk_version=%WindowsSDKVersion%"
 set "p=(Get-Item -LiteralPath"
@@ -347,6 +348,24 @@ for /f "tokens=2*" %%i in ('^(reg query "%~1" /s /v "%~2" ^| ^
 	find "Microsoft Visual Studio"^) 2^>nul') do set "my_vsinstalldir=%%~j"
 if "%my_vsinstalldir%"=="" exit /b 1
 exit /b 0
+
+:get_crt_version <out_var_name>
+setlocal
+set "f=%MSVC_CRT_PATH%\include\crtversion.h"
+if not exist "%f%" exit /b 1
+set "major=" & set "minor=" & set "build="
+for /f "usebackq tokens=1-3" %%i in ("%f%") do (
+	if "%%i"=="#define" (
+		if "%%j"=="_VC_CRT_MAJOR_VERSION" (set "major=%%k"
+		) else if "%%j"=="_VC_CRT_MINOR_VERSION" (set "minor=%%k"
+		) else if "%%j"=="_VC_CRT_BUILD_VERSION" set "build=%%k"
+	)
+)
+if defined major if defined minor if defined build (
+	endlocal & set "%~1=%major%.%minor%.%build%"
+	exit /b 0
+)
+exit /b 1
 
 
 :error_powershell

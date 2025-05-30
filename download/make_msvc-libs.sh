@@ -104,7 +104,7 @@ MSVC_CRT_PATH=$VCToolsInstallDir
 MSVC_SDK_INCLUDE_PATH="$WindowsSdkDir/Include/$WindowsSDKVersion"
 MSVC_SDK_LIB_PATH="$WindowsSdkDir/Lib/$WindowsSDKVersion"
 
-if [ ! -f "$MSVC_CRT_PATH/include/stdarg.h" ]; then	error_msvc_path; fi
+if [ ! -f "$MSVC_CRT_PATH/include/stdarg.h" ]; then error_msvc_path; fi
 
 if [ ! -f "$MSVC_SDK_INCLUDE_PATH/um/Windows.h" ] && \
 	[ ! -f "$MSVC_SDK_INCLUDE_PATH/um/windows.h" ]; then error_sdk_path; fi
@@ -199,10 +199,13 @@ do
 			if [ $? != 0 ]; then error_copy; fi
 		elif [ "$opt_include" = 0 ]; then
 			echo Directory not found \"[$type]$source\".
-			error_copy;
+			error_copy
 		fi	
 	fi
 done 3<"$script_dir/$config_file"
+
+crt_version=$(get_crt_version)
+if [ $? != 0 ]; then crt_version=${VCToolsInstallDir##*/}; fi
 
 sdk_ver_bin="$WindowsSdkDir/bin/$WindowsSDKVersion/x64/certmgr.exe"
 sdk_version=$({ strings -del "$sdk_ver_bin" | grep -A1 'ProductVersion' | \
@@ -210,7 +213,7 @@ sdk_version=$({ strings -del "$sdk_ver_bin" | grep -A1 'ProductVersion' | \
 if [ -z "$sdk_version" ]; then sdk_version=$WindowsSDKVersion; fi
 
 {
-	echo CRT ${VCToolsInstallDir##*/}
+	echo CRT $crt_version
 	echo SDK $sdk_version
 } >version.txt
 
@@ -331,6 +334,33 @@ search_local_path() {
 	echo
 
 	return 0
+}
+
+get_crt_version() {
+	local f="$MSVC_CRT_PATH/include/crtversion.h"
+	if [ ! -f "$f" ]; then return 1; fi
+
+	local major minor build
+	local directive name value remainder
+	while read -r directive name value remainder
+	do
+		if [ "$directive" = "#define" ]; then
+			case $name in
+			_VC_CRT_MAJOR_VERSION)
+				major=$(trim "$value");;
+			_VC_CRT_MINOR_VERSION)
+				minor=$(trim "$value");;
+			_VC_CRT_BUILD_VERSION)
+				build=$(trim "$value");;
+			esac
+		fi
+	done <"$f"
+
+	if [ -n "$major" ] && [ -n "$minor" ] && [ -n "$build" ]; then
+		printf '%s' "$major.$minor.$build"
+		return 0
+	fi
+	return 1
 }
 
 
