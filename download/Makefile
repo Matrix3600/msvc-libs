@@ -158,12 +158,16 @@ space := $(empty) $(empty)
 ESC_SPACE = $(subst $(space),\ ,$(1))
 
 # $(intcmp ...) function requires Make 4.4+ (2022-10).
-# Alternative for older versions
-ifdef NATIVEWIN
- INTCMP = $(shell if $(or $(strip $(1)),0) lss $(or $(strip $(2)),0) \
-  (echo;$(3)) else echo;$(4))
+ifeq (4.4,$(firstword $(sort $(MAKE_VERSION) 4.4)))
+ INTCMP = $(intcmp $(1),$(2),$(3),$(4))
 else
- INTCMP = $(shell [ "$(1)" -lt "$(2)" ] && echo "$(3)" || echo "$(4)")
+ # Alternative for older versions
+ ifdef NATIVEWIN
+  INTCMP = $(shell if $(or $(strip $(1)),0) lss $(or $(strip $(2)),0) \
+   (echo;$(3)) else echo;$(4))
+ else
+  INTCMP = $(shell [ "$(1)" -lt "$(2)" ] && echo "$(3)" || echo "$(4)")
+ endif
 endif
 
 # -----------------------------------------------------------------------------
