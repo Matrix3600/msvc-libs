@@ -315,9 +315,7 @@ exit /b %errorlevel%
 :search_path_3
 if "%opt_local%"=="1" exit /b %search_code%
 :search_path_4
-call :get_vsinstalldir ^
-	HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall ^
-	InstallLocation
+call :get_vsinstalldir
 if %errorlevel% neq 0 exit /b 1
 
 :installdir_ok
@@ -343,11 +341,17 @@ echo(
 exit /b 0
 
 :get_vsinstalldir
-set my_vsinstalldir=
-for /f "tokens=2*" %%i in ('^(reg query "%~1" /s /v "%~2" ^| ^
+set "my_vsinstalldir="
+set "vswhere=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+for /f "usebackq delims=" %%i in (
+	`"%vswhere%" -prerelease -latest -property installationPath 2^>nul`
+) do set "my_vsinstalldir=%%i"
+if defined my_vsinstalldir exit /b 0
+set "k=HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+for /f "tokens=2*" %%i in ('^(reg query "%k%" /s /v "InstallLocation" ^| ^
 	find "Microsoft Visual Studio"^) 2^>nul') do set "my_vsinstalldir=%%~j"
-if "%my_vsinstalldir%"=="" exit /b 1
-exit /b 0
+if defined my_vsinstalldir exit /b 0
+exit /b 1
 
 :get_crt_version <out_var_name>
 setlocal
