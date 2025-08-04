@@ -58,7 +58,7 @@ Parameters to choose which packages to download:
   atlarm64      [VC.ATL.ARM64] + arm64
   sdk           [Windows11SDK.26100] (default version)
 
-  sdkver=xxxxx  Version of SDK package (18362,19041,20348,22000,22621,26100)
+  sdkver=xxxxx  Version of SDK package (19041,22621,26100)
                 (default: 26100).
   lang=xx[-yy]  Preferred language code for packages available in multiple
                 languages (default: LANG environment variable, or "en").
