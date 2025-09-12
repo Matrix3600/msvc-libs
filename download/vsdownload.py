@@ -66,8 +66,8 @@ def getArgsParser():
     parser = argparse.ArgumentParser(description = "Download and install Visual Studio")
     parser.add_argument("--manifest", metavar="manifest", help="A predownloaded manifest file")
     parser.add_argument("--save-manifest", const=True, action="store_const", help="Store the downloaded manifest to a file")
-    parser.add_argument("--major", default=17, metavar="version", help="The major version to download (defaults to 17)")
-    parser.add_argument("--preview", dest="type", default="release", const="pre", action="store_const", help="Download the preview version instead of the release version")
+    parser.add_argument("--major", default=17, type=int, metavar="version", help="The major version to download (defaults to 17)")
+    parser.add_argument("--preview", const=True, action="store_const", help="Download the preview version instead of the release version")
     parser.add_argument("--cache", metavar="dir", help="Directory to use as a persistent cache for downloaded files")
     parser.add_argument("--dest", metavar="dir", help="Directory to install into")
     parser.add_argument("package", metavar="package", help="Package to install. If omitted, installs the default command line tools.", nargs="*")
@@ -255,7 +255,13 @@ def lowercaseIgnores(args):
 
 def getManifest(args):
     if args.manifest == None:
-        url = "https://aka.ms/vs/%s/%s/channel" % (args.major, args.type)
+        type = "release"
+        if args.preview:
+            if args.major < 18:
+                type = "pre"
+            else:
+                type = "insiders"
+        url = "https://aka.ms/vs/%s/%s/channel" % (args.major, type)
         print("Fetching %s" % (url))
         manifest = json.loads(urllib.request.urlopen(url).read())
         print("Got toplevel manifest for %s" % (manifest["info"]["productDisplayVersion"]))
@@ -398,6 +404,22 @@ def matchPackageHostArch(p, host):
 
     return True
 
+def matchPackageTargetArch(p, archs):
+    if archs is None:
+        return True
+
+    known_archs = ["x86", "x64", "arm", "arm64"]
+
+    # Some packages have target arch in their ids, e.g.
+    # - Microsoft.VisualCpp.Tools.HostARM64.TargetX64
+    # - Microsoft.VisualCpp.Tools.HostX64.TargetX64
+    id = p["id"].lower()
+    for a in known_archs:
+        if re.search(fr"\.target{a}(\W|$)", id):
+            return a in archs
+
+    return True
+
 def printDepends(packages, target, constraints, indent, args):
     chipstr = ""
     for k in ["chip", "machineArch"]:
@@ -424,6 +446,9 @@ def printDepends(packages, target, constraints, indent, args):
             ignore = True
         elif args.only_host and not matchPackageHostArch(p, args.host_arch):
             ignorestr = " (HostArchMismatch)"
+            ignore = True
+        elif not matchPackageTargetArch(p, args.architecture):
+            ignorestr = " (TargetArchMismatch)"
             ignore = True
     print(indent + target + chipstr + deptypestr + ignorestr)
     if ignore:
@@ -474,6 +499,8 @@ def aggregateDepends(packages, included, target, constraints, args):
     if p == None:
         return []
     if args.only_host and not matchPackageHostArch(p, args.host_arch):
+        return []
+    if not matchPackageTargetArch(p, args.architecture):
         return []
     packagekey = getPackageKey(p)
     if packagekey in included:

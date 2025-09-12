@@ -58,8 +58,9 @@ Parameters to choose which packages to download:
   atlarm64      [VC.ATL.ARM64] + arm64
   sdk           [Windows11SDK.26100] (default version)
 
-  sdkver=xxxxx  Version of SDK package (19041,22621,26100)
-                (default: 26100).
+  msvcver=xx    MSVC major version (17 or 18) (default: 17).
+  sdkver=xxxxx  SDK version (19041,22621,26100) (default: 26100).
+  preview       Download preview versions instead of release versions.
   lang=xx[-yy]  Preferred language code for packages available in multiple
                 languages (default: LANG environment variable, or "en").
 
@@ -107,6 +108,13 @@ else
  ifdef LANG
   DL_LANG := $(subst _,-,$(firstword $(subst ., ,$(LANG))))
  endif
+endif
+
+ifdef msvcver
+ MSVC_MAJOR_VERSION := $(msvcver)
+ override undefine msvcver
+else
+ MSVC_MAJOR_VERSION = 17
 endif
 
 ifdef sdkver
@@ -357,13 +365,14 @@ ifeq (,$(filter onlydl,$(MAKECMDGOALS)))
   $(.DEFAULT_GOAL)) = $(MSVC_LIBS_DIR)/
 endif
 NO_DL := $(if $(filter nodl,$(MAKECMDGOALS)),1)
+PREVIEW := $(if $(filter preview,$(MAKECMDGOALS)),1)
 
 INTEL_PACKAGES = $(CRT_LIB_X86) $(CRT_LIB_X64)
 ATL_PACKAGES = $(CRT_LIB_ATL_X86) $(CRT_LIB_ATL_X64) $(INTEL_PACKAGES)
 ATLARM32_PACKAGES = $(CRT_LIB_ATL_ARM32) $(CRT_LIB_ARM32)
 ATLARM64_PACKAGES = $(CRT_LIB_ATL_ARM64) $(CRT_LIB_ARM64)
 
-.PHONY: $(target_list) onlydl nodl help \
+.PHONY: $(target_list) onlydl nodl preview help \
  clean clean-all clean-dl clean-msvc clean-sdk clean-atl
 
 default: $(.DEFAULT_GOAL) $(END_default)
@@ -399,6 +408,15 @@ help:
 # -----------------------------------------------------------------------------
 
 DOWNLOAD_OPTIONS = --accept-license --skip-recommended
+DOWNLOAD_OPTIONS += --major $(MSVC_MAJOR_VERSION)
+
+ifneq (,$(call INTCMP,$(MSVC_MAJOR_VERSION),18,,1))
+ PREVIEW = 1
+endif
+ifdef PREVIEW
+ DOWNLOAD_OPTIONS += --preview
+endif
+
 ifdef DL_LANG
  DOWNLOAD_OPTIONS += --language $(DL_LANG)
 endif
@@ -413,7 +431,7 @@ SDKARM32_PACKAGE = Windows$(sdkwinver)SDK.$(SDKARM32_VERSION)
 .DELETE_ON_ERROR:
 
 override undefine cmd_flag_prereq
-cmd_flag_prereq := $(if $(filter-out onlydl nodl,$(MAKECMDGOALS)),,default)
+cmd_flag_prereq := $(if $(filter-out onlydl nodl preview,$(MAKECMDGOALS)),,default)
 
 define CMD_FLAG_RULE
 $(1): $(cmd_flag_prereq) ; $(if $(cmd_flag_prereq),,@:)
@@ -421,6 +439,7 @@ endef
 
 $(eval $(call CMD_FLAG_RULE,onlydl))
 $(eval $(call CMD_FLAG_RULE,nodl))
+$(eval $(call CMD_FLAG_RULE,preview))
 
 #
 # Clean directories
