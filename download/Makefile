@@ -410,9 +410,6 @@ help:
 DOWNLOAD_OPTIONS = --accept-license --skip-recommended
 DOWNLOAD_OPTIONS += --major $(MSVC_MAJOR_VERSION)
 
-ifneq (,$(call INTCMP,$(MSVC_MAJOR_VERSION),18,,1))
- PREVIEW = 1
-endif
 ifdef PREVIEW
  DOWNLOAD_OPTIONS += --preview
 endif
