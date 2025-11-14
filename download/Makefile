@@ -420,10 +420,10 @@ endif
 
 override undefine sdkwinver
 sdkwinver := $(call INTCMP,$(SDK_VERSION),22000,10,11)
-SDK_PACKAGE = Windows$(sdkwinver)SDK.$(SDK_VERSION)
+SDK_PACKAGE := Windows$(sdkwinver)SDK.$(SDK_VERSION)
 
 sdkwinver := $(call INTCMP,$(SDKARM32_VERSION),22000,10,11)
-SDKARM32_PACKAGE = Windows$(sdkwinver)SDK.$(SDKARM32_VERSION)
+SDKARM32_PACKAGE := Windows$(sdkwinver)SDK.$(SDKARM32_VERSION)
 
 .DELETE_ON_ERROR:
 
