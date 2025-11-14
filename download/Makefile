@@ -58,7 +58,7 @@ Parameters to choose which packages to download:
   atlarm64      [VC.ATL.ARM64] + arm64
   sdk           [Windows11SDK.26100] (default version)
 
-  msvcver=xx    MSVC major version (15-18) (default: 17).
+  msvcver=xx    MSVC major version (15-18) (default: 18).
   sdkver=xxxxx  SDK version (19041,22621,26100) (default: 26100).
   preview       Download preview versions instead of release versions.
   lang=xx[-yy]  Preferred language code for packages available in multiple
@@ -114,7 +114,7 @@ ifdef msvcver
  MSVC_MAJOR_VERSION := $(msvcver)
  override undefine msvcver
 else
- MSVC_MAJOR_VERSION = 17
+ MSVC_MAJOR_VERSION = 18
 endif
 
 ifdef sdkver
