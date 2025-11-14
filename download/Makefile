@@ -44,7 +44,7 @@ Parameters to choose which packages to download:
                 your machine architecture. Implicit when no argument is
                 specified.
   all           intel + arm64 + atl + atlarm64 + asan + sdk
-                (arm32 is not included)
+                (arm32 is not included).
   intel         [VC.Tools.x86.x64]
   arm           arm32 + arm64
   x86           = intel
@@ -58,10 +58,13 @@ Parameters to choose which packages to download:
   atlarm32      [VC.ATL.ARM] + arm32
   atlarm64      [VC.ATL.ARM64] + arm64
   asan          [VC.ASAN]
-  sdk           [Windows11SDK.26100] (default version)
-
+  sdk           [Windows10SDK.<sdkver>] or [Windows11SDK.<sdkver>]
+                See below for values of <sdkver>.
+  
   msvcver=xx    MSVC major version (15-18) (default: 18).
-  sdkver=xxxxx  SDK version (19041,22621,26100) (default: 26100).
+  sdkver=xxxxx  SDK version (19041,22621,26100)
+                (default: 26100 (MSVC 17/18), 22621 (MSVC 16) or 
+                19041 (MSVC 15)).
   preview       Download preview versions instead of release versions.
   lang=xx[-yy]  Preferred language code for packages available in multiple
                 languages (default: LANG environment variable, or "en").
@@ -102,29 +105,6 @@ endef
 #     o msitools (0.98+)
 #     o libgcab-1.0-0 (1.2+)
 #
-
-ifdef lang
- DL_LANG := $(lang)
- override undefine lang
-else
- ifdef LANG
-  DL_LANG := $(subst _,-,$(firstword $(subst ., ,$(LANG))))
- endif
-endif
-
-ifdef msvcver
- MSVC_MAJOR_VERSION := $(msvcver)
- override undefine msvcver
-else
- MSVC_MAJOR_VERSION = 18
-endif
-
-ifdef sdkver
- SDK_VERSION := $(sdkver)
- override undefine sdkver
-else
- SDK_VERSION = 26100
-endif
 
 # -----------------------------------------------------------------------------
 # Detect system and check required files
@@ -224,6 +204,39 @@ endif
 ifeq (,$(wildcard $(MSVC_LIBS_CONFIG)))
  $(error ERROR: The configuration file "$(MSVC_LIBS_CONFIG)" was not found. \
   Please place it in this directory)
+endif
+
+# -----------------------------------------------------------------------------
+# Read parameters
+# -----------------------------------------------------------------------------
+
+ifdef lang
+ DL_LANG := $(lang)
+ override undefine lang
+else
+ ifdef LANG
+  DL_LANG := $(subst _,-,$(firstword $(subst ., ,$(LANG))))
+ endif
+endif
+
+ifdef msvcver
+ MSVC_MAJOR_VERSION := $(msvcver)
+ override undefine msvcver
+else
+ MSVC_MAJOR_VERSION = 18
+endif
+
+ifdef sdkver
+ SDK_VERSION := $(sdkver)
+ override undefine sdkver
+else
+ ifeq (,$(call INTCMP,$(MSVC_MAJOR_VERSION),16,,1))
+  SDK_VERSION = 19041
+ else ifeq (,$(call INTCMP,$(MSVC_MAJOR_VERSION),17,,1))
+  SDK_VERSION = 22621
+ else
+  SDK_VERSION = 26100
+ endif
 endif
 
 # -----------------------------------------------------------------------------
@@ -481,7 +494,7 @@ else
 endif
 endef
 
-define PACKAGE_NOT_AVAILABLE
+define ERROR_PACKAGE_NOT_AVAILABLE
 $$($(1)):
 	$$(error The $(2) package is not available for this version of MSVC/SDK)
 endef
@@ -500,8 +513,8 @@ ifeq (,$(call INTCMP,$(MSVC_MAJOR_VERSION),18,,1))
  $(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM32,VC.Tools.ARM))
  $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM32,VC.ATL.ARM))
 else
- $(eval $(call PACKAGE_NOT_AVAILABLE,CRT_LIB_ARM32,VC.Tools.ARM))
- $(eval $(call PACKAGE_NOT_AVAILABLE,CRT_LIB_ATL_ARM32,VC.ATL.ARM))
+ $(eval $(call ERROR_PACKAGE_NOT_AVAILABLE,CRT_LIB_ARM32,VC.Tools.ARM))
+ $(eval $(call ERROR_PACKAGE_NOT_AVAILABLE,CRT_LIB_ATL_ARM32,VC.ATL.ARM))
 endif
 
 ifneq ($(SDK_VERSION),$(SDKARM32_VERSION))
