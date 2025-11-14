@@ -481,17 +481,29 @@ else
 endif
 endef
 
+define PACKAGE_NOT_AVAILABLE
+$$($(1)):
+	$$(error The $(2) package is not available for this version of MSVC/SDK)
+endef
+
 $(CRT_LIB_X86): $(CRT_LIB_X64)
 $(CRT_LIB_ATL_X86): $(CRT_LIB_ATL_X64)
 
 $(eval $(call DOWNLOAD_RULE,CRT_LIB_X64,VC.Tools.x86.x64))
-$(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM32,VC.Tools.ARM))
 $(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM64,VC.Tools.ARM64))
 $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_X64,VC.ATL))
-$(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM32,VC.ATL.ARM))
 $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM64,VC.ATL.ARM64))
 $(eval $(call DOWNLOAD_RULE,CRT_LIB_ASAN,VC.ASAN))
 $(eval $(call DOWNLOAD_RULE,SDK_LIB,$(SDK_PACKAGE)))
+
+ifeq (,$(call INTCMP,$(MSVC_MAJOR_VERSION),18,,1))
+ $(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM32,VC.Tools.ARM))
+ $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM32,VC.ATL.ARM))
+else
+ $(eval $(call PACKAGE_NOT_AVAILABLE,CRT_LIB_ARM32,VC.Tools.ARM))
+ $(eval $(call PACKAGE_NOT_AVAILABLE,CRT_LIB_ATL_ARM32,VC.ATL.ARM))
+endif
+
 ifneq ($(SDK_VERSION),$(SDKARM32_VERSION))
  $(eval $(call DOWNLOAD_RULE,SDKARM32_LIB,$(SDKARM32_PACKAGE)))
 endif
