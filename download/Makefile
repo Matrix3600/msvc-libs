@@ -43,7 +43,8 @@ Parameters to choose which packages to download:
   default       (intel + sdk), (arm32 + sdk) or (arm64 + sdk), depending on
                 your machine architecture. Implicit when no argument is
                 specified.
-  all           intel + arm64 + atl + atlarm64 + sdk (arm32 not included)
+  all           intel + arm64 + atl + atlarm64 + asan + sdk
+                (arm32 is not included)
   intel         [VC.Tools.x86.x64]
   arm           arm32 + arm64
   x86           = intel
@@ -56,6 +57,7 @@ Parameters to choose which packages to download:
   atl64         = atl
   atlarm32      [VC.ATL.ARM] + arm32
   atlarm64      [VC.ATL.ARM64] + arm64
+  asan          [VC.ASAN]
   sdk           [Windows11SDK.26100] (default version)
 
   msvcver=xx    MSVC major version (15-18) (default: 18).
@@ -302,6 +304,7 @@ CRT_LIB_ATL_X86 = $(ATL_DIR)/lib/x86/
 CRT_LIB_ATL_X64 = $(ATL_DIR)/lib/x64/
 CRT_LIB_ATL_ARM32 = $(ATL_DIR)/lib/arm/
 CRT_LIB_ATL_ARM64 = $(ATL_DIR)/lib/arm64/
+CRT_LIB_ASAN = $(CRT_ROOT_DIR)/$(CRT_VERSION)/include/sanitizer
 
 SDK_LIB = $(call ESC_SPACE,$(SDK_LIB_DIR))/
 SDK_LIB_ARM32 = $(call ESC_SPACE,$(SDK_LIB_DIR))/um/arm/
@@ -357,7 +360,7 @@ PACKAGES += $(SDK_PACKAGES)
 
 override undefine target_list
 target_list = all intel arm x86 x64 arm32 arm64 atl atlarm atl32 atl64 \
- atlarm32 atlarm64 sdk default intel_def arm32_def arm64_def
+ atlarm32 atlarm64 asan sdk default intel_def arm32_def arm64_def
 $(foreach target,$(target_list),$(eval END_$(target)=))
 
 ifeq (,$(filter onlydl,$(MAKECMDGOALS)))
@@ -377,7 +380,7 @@ ATLARM64_PACKAGES = $(CRT_LIB_ATL_ARM64) $(CRT_LIB_ARM64)
 
 default: $(.DEFAULT_GOAL) $(END_default)
 
-all: $(ATL_PACKAGES) $(ATLARM64_PACKAGES) $(SDK_PACKAGES) $(END_all)
+all: $(ATL_PACKAGES) $(ATLARM64_PACKAGES) $(CRT_LIB_ASAN) $(SDK_PACKAGES) $(END_all)
 intel_def: $(INTEL_PACKAGES) $(SDK_PACKAGES) $(END_intel_def)
 arm32_def: $(CRT_LIB_ARM32) $(SDK_PACKAGES) $(END_arm32_def)
 arm64_def: $(CRT_LIB_ARM64) $(SDK_PACKAGES) $(END_arm64_def)
@@ -394,6 +397,8 @@ atl32: $(ATL_PACKAGES) $(END_atl32)
 atl64: $(ATL_PACKAGES) $(END_atl64)
 atlarm32: $(ATLARM32_PACKAGES) $(END_atlarm32)
 atlarm64: $(ATLARM64_PACKAGES) $(END_atlarm64)
+
+asan: $(CRT_LIB_ASAN) $(END_asan)
 
 sdk: $(SDK_PACKAGES) $(END_sdk)
 
@@ -485,6 +490,7 @@ $(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM64,VC.Tools.ARM64))
 $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_X64,VC.ATL))
 $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM32,VC.ATL.ARM))
 $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM64,VC.ATL.ARM64))
+$(eval $(call DOWNLOAD_RULE,CRT_LIB_ASAN,VC.ASAN))
 $(eval $(call DOWNLOAD_RULE,SDK_LIB,$(SDK_PACKAGE)))
 ifneq ($(SDK_VERSION),$(SDKARM32_VERSION))
  $(eval $(call DOWNLOAD_RULE,SDKARM32_LIB,$(SDKARM32_PACKAGE)))
