@@ -60,11 +60,10 @@ Parameters to choose which packages to download:
   asan          [VC.ASAN]
   sdk           [Windows10SDK.<sdkver>] or [Windows11SDK.<sdkver>]
                 See below for values of <sdkver>.
-  
-  msvcver=xx    MSVC major version (15-18) (default: 18).
+
+  vsver=xx      Visual Studio major version (15-18) (default: 18).
   sdkver=xxxxx  SDK version (19041,22621,26100)
-                (default: 26100 (MSVC 17/18), 22621 (MSVC 16) or 
-                19041 (MSVC 15)).
+                (default: 26100 (VS 17/18), 22621 (VS 16) or 19041 (VS 15)).
   preview       Download preview versions instead of release versions.
   lang=xx[-yy]  Preferred language code for packages available in multiple
                 languages (default: LANG environment variable, or "en").
@@ -219,20 +218,20 @@ else
  endif
 endif
 
-ifdef msvcver
- MSVC_MAJOR_VERSION := $(msvcver)
- override undefine msvcver
+ifdef vsver
+ VS_MAJOR_VERSION := $(vsver)
+ override undefine vsver
 else
- MSVC_MAJOR_VERSION = 18
+ VS_MAJOR_VERSION = 18
 endif
 
 ifdef sdkver
  SDK_VERSION := $(sdkver)
  override undefine sdkver
 else
- ifeq (,$(call INTCMP,$(MSVC_MAJOR_VERSION),16,,1))
+ ifeq (,$(call INTCMP,$(VS_MAJOR_VERSION),16,,1))
   SDK_VERSION = 19041
- else ifeq (,$(call INTCMP,$(MSVC_MAJOR_VERSION),17,,1))
+ else ifeq (,$(call INTCMP,$(VS_MAJOR_VERSION),17,,1))
   SDK_VERSION = 22621
  else
   SDK_VERSION = 26100
@@ -426,7 +425,7 @@ help:
 # -----------------------------------------------------------------------------
 
 DOWNLOAD_OPTIONS = --accept-license --skip-recommended
-DOWNLOAD_OPTIONS += --major $(MSVC_MAJOR_VERSION)
+DOWNLOAD_OPTIONS += --major $(VS_MAJOR_VERSION)
 
 ifdef PREVIEW
  DOWNLOAD_OPTIONS += --preview
@@ -496,7 +495,7 @@ endef
 
 define ERROR_PACKAGE_NOT_AVAILABLE
 $$($(1)):
-	$$(error The $(2) package is not available for this version of MSVC/SDK)
+	$$(error The $(2) package is not available for this version of Visual Studio)
 endef
 
 $(CRT_LIB_X86): $(CRT_LIB_X64)
@@ -509,7 +508,7 @@ $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM64,VC.ATL.ARM64))
 $(eval $(call DOWNLOAD_RULE,CRT_LIB_ASAN,VC.ASAN))
 $(eval $(call DOWNLOAD_RULE,SDK_LIB,$(SDK_PACKAGE)))
 
-ifeq (,$(call INTCMP,$(MSVC_MAJOR_VERSION),18,,1))
+ifeq (,$(call INTCMP,$(VS_MAJOR_VERSION),18,,1))
  $(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM32,VC.Tools.ARM))
  $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM32,VC.ATL.ARM))
 else
