@@ -61,7 +61,11 @@ Parameters to choose which packages to download:
   sdk           [Windows<winver>SDK.<sdkver>]
                 See below for values of <sdkver>.
 
-  vsver=xx      Visual Studio major version (15-18) (default: 18).
+  vsver=x[.y]   Visual Studio version (15, 16.0 to 18.0) (default: 18).
+                If only the major version is specified (e.g., 17), the
+                latest unversioned MSVC packages are selected for this version.
+                If a full version is specified (e.g., 17.5), the corresponding
+                versioned MSVC packages are selected.
   sdkver=xxxxx  SDK version (19041,22621,26100)
                 (default: 26100 (VS 17/18), 22621 (VS 16) or 19041 (VS 15)).
   preview       Download preview versions instead of release versions.
@@ -218,11 +222,69 @@ else
  endif
 endif
 
+# LOOKUP: Find an element in a list and return the corresponding element in
+# another list.
+override undefine _pos
+override undefine pos
+_pos = $(if $(filter $1,$2),$(call _pos,$1,\
+         $(wordlist 2,$(words $2),$2),x $3),$3)
+pos = $(words $(call _pos,$1,$2))
+LOOKUP = $(word $(call pos,$1,$2),$3)
+
+# List of Visual Studio versions
+VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8
+VS_VERSIONS = 16.9  16.10 16.11 17.0  17.1  17.2  17.3  17.4  17.5  17.6 \
+ 17.7  17.8  17.9  17.10 17.11 17.12 17.13 17.14 18.0
+# List of corresponding MSVC Build Tools versions
+VC_VERSIONS_1 = 14.20 14.21 14.22 14.23 14.24 14.25 14.26 14.27 14.28
+VC_VERSIONS = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
+ 14.37 14.38 14.39 14.40 14.41 14.42 14.43 14.44 14.50
+
+# Convert Visual Studio version to MSVC Build Tools version
+VSVER_TO_VCVER = $(call LOOKUP,$1,$(VS_VERSIONS_1) $(VS_VERSIONS),$\
+ $(VC_VERSIONS_1) $(VC_VERSIONS))
+
+# By default, select the latest unversioned packages for the latest major
+# version of Visual Studio
+VC_TOOLS_VER = Tools
+VC_VERSION =
+VC_PREFIX =
+VS_MAJOR_VERSION = 18
+
 ifdef vsver
- VS_MAJOR_VERSION := $(vsver)
+ override undefine vs_ver_list
+ vs_ver_list := $(subst ., ,$(vsver))
+ ifeq (1,$(words $(vs_ver_list)))
+  # Select the latest unversioned packages for the specified major version of
+  # Visual Studio
+  VS_MAJOR_VERSION := $(vsver)
+ else
+  ifneq (2,$(words $(vs_ver_list)))
+   $(error ERROR: $(vsver) is not a valid version (x.x))
+  endif
+
+  ifeq (,$(filter $(vsver),$(VS_VERSIONS_1) $(VS_VERSIONS)))
+   $(error ERROR: $(vsver) is not a supported version of Visual Studio)
+  endif
+
+  override undefine vc_ver
+  vc_ver := $(call VSVER_TO_VCVER,$(vsver))
+
+  ifneq (,$(filter $(vsver),$(VS_VERSIONS_1)))
+   VC_TOOLS_VER := $(vc_ver)
+  else
+   VC_TOOLS_VER := $(vc_ver).$(vsver)
+  endif
+  VC_VERSION := $(VC_TOOLS_VER).
+  VC_PREFIX := $(vc_ver).
+  ifeq (16.11,$(vsver))
+   VS_MAJOR_VERSION = 17
+  else
+   VS_MAJOR_VERSION := $(word 1,$(vs_ver_list))
+  endif
+ endif
+
  override undefine vsver
-else
- VS_MAJOR_VERSION = 18
 endif
 
 ifdef sdkver
@@ -273,13 +335,41 @@ else
 endif
 endef
 
+define CLEAN_VERSION
+$(call GET_DIR_VERSION,$(1))
+ifneq (,$$(gdv_version))
+ ifeq ($$(gdv_version),$(2))
+  $$(error ERROR: Failed to delete directory $(1)/$(2))
+ endif
+ # If this directory does not contain a "lib", "include", "atlmfc" or "bin"
+ # sub-directory, or does not start with VC_PREFIX, delete it.
+ ifeq (,$$(and \
+   $$(wildcard $(addprefix $(1)/$$(gdv_version)/,$(addsuffix /.,$\
+    lib include atlmfc bin))),$\
+   $$(filter $(VC_PREFIX)%,$$(gdv_version))))
+  $$(info Deleting directory $(1)/$$(gdv_version) ...)
+  ifdef NATIVEWIN
+   gdv_wdir := $$(subst /,\,$(1))\$$(gdv_version)
+   $$(shell rd /s/q "$$(gdv_wdir)" >nul)
+  else
+   $$(shell rm -rf "$(1)/$$(gdv_version)" >/dev/null)
+  endif
+  # To avoid an infinite loop in case of rd/rm failure, gdv_version is passed
+  # as an additional argument and tested at the next level.
+  $$(eval $$(call CLEAN_VERSION,$(1),$$(gdv_version)))
+ endif
+endif
+endef
+
 define DO_UPDATE_VERSION
+$(call CLEAN_VERSION,$(CRT_ROOT_DIR))
 $(call GET_DIR_VERSION,$(CRT_ROOT_DIR))
 CRT_VERSION := $$(gdv_version)
 endef
 UPDATE_VERSION = $(eval $(DO_UPDATE_VERSION))
 
 define DO_CHECK_VERSION
+$(call CLEAN_VERSION,$(CRT_ROOT_DIR))
 $(call GET_DIR_VERSION,$(CRT_ROOT_DIR))
 ifneq (,$$(CRT_VERSION))
  ifneq (,$$(gdv_version))
@@ -316,7 +406,12 @@ CRT_LIB_ATL_X86 = $(ATL_DIR)/lib/x86/
 CRT_LIB_ATL_X64 = $(ATL_DIR)/lib/x64/
 CRT_LIB_ATL_ARM32 = $(ATL_DIR)/lib/arm/
 CRT_LIB_ATL_ARM64 = $(ATL_DIR)/lib/arm64/
-CRT_LIB_ASAN = $(CRT_ROOT_DIR)/$(CRT_VERSION)/include/sanitizer
+
+ifndef VC_PREFIX
+ CRT_LIB_ASAN = $(CRT_ROOT_DIR)/$(CRT_VERSION)/include/sanitizer
+else
+ CRT_LIB_ASAN =
+endif
 
 SDK_LIB = $(call ESC_SPACE,$(SDK_LIB_DIR))/
 SDK_LIB_ARM32 = $(call ESC_SPACE,$(SDK_LIB_DIR))/um/arm/
@@ -502,19 +597,21 @@ endef
 $(CRT_LIB_X86): $(CRT_LIB_X64)
 $(CRT_LIB_ATL_X86): $(CRT_LIB_ATL_X64)
 
-$(eval $(call DOWNLOAD_RULE,CRT_LIB_X64,VC.Tools.x86.x64))
-$(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM64,VC.Tools.ARM64))
-$(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_X64,VC.ATL))
-$(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM64,VC.ATL.ARM64))
-$(eval $(call DOWNLOAD_RULE,CRT_LIB_ASAN,VC.ASAN))
+$(eval $(call DOWNLOAD_RULE,CRT_LIB_X64,VC.$(VC_TOOLS_VER).x86.x64))
+$(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM64,VC.$(VC_TOOLS_VER).ARM64))
+$(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_X64,VC.$(VC_VERSION)ATL))
+$(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM64,VC.$(VC_VERSION)ATL.ARM64))
+ifndef VC_PREFIX
+ $(eval $(call DOWNLOAD_RULE,CRT_LIB_ASAN,VC.ASAN))
+endif
 $(eval $(call DOWNLOAD_RULE,SDK_LIB,$(SDK_PACKAGE)))
 
 ifeq (,$(call INTCMP,$(VS_MAJOR_VERSION),18,,1))
- $(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM32,VC.Tools.ARM))
- $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM32,VC.ATL.ARM))
+ $(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM32,VC.$(VC_TOOLS_VER).ARM))
+ $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM32,VC.$(VC_VERSION)ATL.ARM))
 else
- $(eval $(call ERROR_PACKAGE_NOT_AVAILABLE,CRT_LIB_ARM32,VC.Tools.ARM))
- $(eval $(call ERROR_PACKAGE_NOT_AVAILABLE,CRT_LIB_ATL_ARM32,VC.ATL.ARM))
+ $(eval $(call ERROR_PACKAGE_NOT_AVAILABLE,CRT_LIB_ARM32,VC.$(VC_TOOLS_VER).ARM))
+ $(eval $(call ERROR_PACKAGE_NOT_AVAILABLE,CRT_LIB_ATL_ARM32,VC.$(VC_VERSION)ATL.ARM))
 endif
 
 ifneq ($(SDK_VERSION),$(SDKARM32_VERSION))
