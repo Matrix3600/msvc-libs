@@ -58,7 +58,7 @@ Parameters to choose which packages to download:
   atlarm32      [VC.ATL.ARM] + arm32
   atlarm64      [VC.ATL.ARM64] + arm64
   asan          [VC.ASAN]
-  sdk           [Windows10SDK.<sdkver>] or [Windows11SDK.<sdkver>]
+  sdk           [Windows<winver>SDK.<sdkver>]
                 See below for values of <sdkver>.
 
   vsver=xx      Visual Studio major version (15-18) (default: 18).
@@ -392,7 +392,8 @@ ATLARM64_PACKAGES = $(CRT_LIB_ATL_ARM64) $(CRT_LIB_ARM64)
 
 default: $(.DEFAULT_GOAL) $(END_default)
 
-all: $(ATL_PACKAGES) $(ATLARM64_PACKAGES) $(CRT_LIB_ASAN) $(SDK_PACKAGES) $(END_all)
+all: $(ATL_PACKAGES) $(ATLARM64_PACKAGES) $(CRT_LIB_ASAN) \
+ $(SDK_PACKAGES) $(END_all)
 intel_def: $(INTEL_PACKAGES) $(SDK_PACKAGES) $(END_intel_def)
 arm32_def: $(CRT_LIB_ARM32) $(SDK_PACKAGES) $(END_arm32_def)
 arm64_def: $(CRT_LIB_ARM64) $(SDK_PACKAGES) $(END_arm64_def)
@@ -495,7 +496,7 @@ endef
 
 define ERROR_PACKAGE_NOT_AVAILABLE
 $$($(1)):
-	$$(error The $(2) package is not available for this version of Visual Studio)
+	$$(error ERROR: The $(2) package is not available for this version of Visual Studio)
 endef
 
 $(CRT_LIB_X86): $(CRT_LIB_X64)
