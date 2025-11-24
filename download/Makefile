@@ -74,6 +74,8 @@ Parameters to choose which packages to download:
 
 The downloaded packages are indicated in brackets.
 
+arm32/atlarm32 are no longer available in Visual Studio 18 and up.
+
 Other parameters:
   help          Display this help message.
   onlydl        Download only, do not create the standalone library.
@@ -493,20 +495,26 @@ intel_def: $(INTEL_PACKAGES) $(SDK_PACKAGES) $(END_intel_def)
 arm32_def: $(CRT_LIB_ARM32) $(SDK_PACKAGES) $(END_arm32_def)
 arm64_def: $(CRT_LIB_ARM64) $(SDK_PACKAGES) $(END_arm64_def)
 intel: $(INTEL_PACKAGES) $(END_intel)
-arm: $(CRT_LIB_ARM32) $(CRT_LIB_ARM64) $(END_arm)
 x86: $(INTEL_PACKAGES) $(END_x86)
 x64: $(INTEL_PACKAGES) $(END_x64)
 arm32: $(CRT_LIB_ARM32) $(END_arm32)
 arm64: $(CRT_LIB_ARM64) $(END_arm64)
 
 atl: $(ATL_PACKAGES) $(END_atl)
-atlarm: $(ATLARM32_PACKAGES) $(ATLARM64_PACKAGES) $(END_atlarm)
 atl32: $(ATL_PACKAGES) $(END_atl32)
 atl64: $(ATL_PACKAGES) $(END_atl64)
 atlarm32: $(ATLARM32_PACKAGES) $(END_atlarm32)
 atlarm64: $(ATLARM64_PACKAGES) $(END_atlarm64)
 
 asan: $(CRT_LIB_ASAN) $(END_asan)
+
+ifeq (,$(call INTCMP,$(VS_MAJOR_VERSION),18,,1))
+arm: $(CRT_LIB_ARM32) $(CRT_LIB_ARM64) $(END_arm)
+atlarm: $(ATLARM32_PACKAGES) $(ATLARM64_PACKAGES) $(END_atlarm)
+else
+arm: $(CRT_LIB_ARM64) $(END_arm)
+atlarm: $(ATLARM64_PACKAGES) $(END_atlarm)
+endif
 
 sdk: $(SDK_PACKAGES) $(END_sdk)
 
