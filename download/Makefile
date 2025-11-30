@@ -95,8 +95,8 @@ endef
 # parameter is specified.
 #
 # Note: Microsoft dropped support for 32-bit ARM in SDK 26100.
-# If you request ARM32 with SDK >= 26100, the makefile copies the ARM32 files
-# from SDK 22621 into the new SDK.
+# If you request ARM32 with SDK >= 26100 and VS < 18, the makefile copies the
+# ARM32 files from SDK 22621 into the new SDK.
 #
 # *** Requirements ***
 #
@@ -159,7 +159,7 @@ else
  # Alternative for older versions
  ifdef NATIVEWIN
   INTCMP = $(shell if $(or $(strip $(1)),0) lss $(or $(strip $(2)),0) \
-   (echo;$(3)) else echo;$(4))
+    (echo;$(3)) else echo;$(4))
  else
   INTCMP = $(shell [ "$(1)" -lt "$(2)" ] && echo "$(3)" || echo "$(4)")
  endif
@@ -181,7 +181,7 @@ ifdef NATIVEWIN
   PWRSHELL = powershell.exe
   override undefine version
   version = $(or $(shell \
-   $(PWRSHELL) -c "$$PSVersionTable.PSVersion.Major" 2>nul),0)
+    $(PWRSHELL) -c "$$PSVersionTable.PSVersion.Major" 2>nul),0)
   ifeq (,$(call INTCMP,$(version),3,,1))
    $(error ERROR: PowerShell 3 or higher is required)
   endif
@@ -198,17 +198,17 @@ MSVC_LIBS_CONFIG = make_msvc-libs_conf.txt
 
 ifeq (,$(wildcard $(VSDOWNLOAD_SCRIPT)))
  $(error ERROR: The download script "$(VSDOWNLOAD_SCRIPT)" was not found. \
-  Please place it in this directory)
+   Please place it in this directory)
 endif
 
 ifeq (,$(wildcard $(MSVC_LIBS_SCRIPT)))
  $(error ERROR: The script "$(MSVC_LIBS_SCRIPT)" was not found. \
-  Please place it in this directory)
+   Please place it in this directory)
 endif
 
 ifeq (,$(wildcard $(MSVC_LIBS_CONFIG)))
  $(error ERROR: The configuration file "$(MSVC_LIBS_CONFIG)" was not found. \
-  Please place it in this directory)
+   Please place it in this directory)
 endif
 
 # -----------------------------------------------------------------------------
@@ -236,15 +236,15 @@ LOOKUP = $(word $(call pos,$1,$2),$3)
 # List of Visual Studio versions
 VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8
 VS_VERSIONS = 16.9  16.10 16.11 17.0  17.1  17.2  17.3  17.4  17.5  17.6 \
- 17.7  17.8  17.9  17.10 17.11 17.12 17.13 17.14 18.0
+  17.7  17.8  17.9  17.10 17.11 17.12 17.13 17.14 18.0
 # List of corresponding MSVC Build Tools versions
 VC_VERSIONS_1 = 14.20 14.21 14.22 14.23 14.24 14.25 14.26 14.27 14.28
 VC_VERSIONS = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
- 14.37 14.38 14.39 14.40 14.41 14.42 14.43 14.44 14.50
+  14.37 14.38 14.39 14.40 14.41 14.42 14.43 14.44 14.50
 
 # Convert Visual Studio version to MSVC Build Tools version
 VSVER_TO_VCVER = $(call LOOKUP,$1,$(VS_VERSIONS_1) $(VS_VERSIONS),$\
- $(VC_VERSIONS_1) $(VC_VERSIONS))
+  $(VC_VERSIONS_1) $(VC_VERSIONS))
 
 # By default, select the latest unversioned packages for the latest major
 # version of Visual Studio
@@ -327,12 +327,12 @@ define GET_DIR_VERSION
 ifdef NATIVEWIN
  gdv_wdir := $$(subst /,\,$(1))
  gdv_version := $$(shell $$(PWRSHELL) -c "Get-ChildItem '$$(gdv_wdir)' \
-  -Directory -Name | Where-Object { $$$$_ -match '^\d+(\.\d+){0,3}$$$$' } | \
-  Sort-Object { $$$$($$$$_ -replace '^\d+$$$$','$$$$&.0') -as [version] } | \
-  Select-Object -Last 1" 2>nul)
+   -Directory -Name | Where-Object { $$$$_ -match '^\d+(\.\d+){0,3}$$$$' } | \
+   Sort-Object { $$$$($$$$_ -replace '^\d+$$$$','$$$$&.0') -as [version] } | \
+   Select-Object -Last 1" 2>nul)
 else
  gdv_version := $$(shell { cd "$(1)" && ls -dv -- */ | tail -n 1; \
-  } 2>/dev/null)
+   } 2>/dev/null)
  gdv_version := $$(gdv_version:%/=%)
 endif
 endef
@@ -346,9 +346,9 @@ ifneq (,$$(gdv_version))
  # If this directory does not contain a "lib", "include", "atlmfc" or "bin"
  # sub-directory, or does not start with VC_PREFIX, delete it.
  ifeq (,$$(and \
-   $$(wildcard $(addprefix $(1)/$$(gdv_version)/,$(addsuffix /.,$\
-    lib include atlmfc bin))),$\
-   $$(filter $(VC_PREFIX)%,$$(gdv_version))))
+    $$(wildcard $(addprefix $(1)/$$(gdv_version)/,$(addsuffix /.,$\
+      lib include atlmfc bin))),$\
+    $$(filter $(VC_PREFIX)%,$$(gdv_version))))
   $$(info Deleting directory $(1)/$$(gdv_version) ...)
   ifdef NATIVEWIN
    gdv_wdir := $$(subst /,\,$(1))\$$(gdv_version)
@@ -377,7 +377,7 @@ ifneq (,$$(CRT_VERSION))
  ifneq (,$$(gdv_version))
   ifneq ($$(gdv_version),$$(CRT_VERSION))
    $$(error ERROR: MSVC version changed from $$(CRT_VERSION) to $$(gdv_version).\
-    Delete the "VC" directory and run "make" again)
+     Delete the "VC" directory and run "make" again)
   endif
  endif
 endif
@@ -427,12 +427,21 @@ else ifeq (arm64_def,$(.DEFAULT_GOAL))
  DEFAULT_CRT_PACKAGES = $(CRT_LIB_ARM64)
 endif
 
+override undefine arm32_targets
+override undefine atlarm32_targets
+arm32_targets = arm32 arm32_def atlarm32
+atlarm32_targets = atlarm32
+ifeq (,$(call INTCMP,$(VS_MAJOR_VERSION),18,,1))
+ arm32_targets += arm atlarm
+ atlarm32_targets += atlarm
+endif
+
 PACKAGES =
 SDK_PACKAGES =
 ifneq (,$(filter all intel intel_def x86 x64 atl atl32 atl64,$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_X86) $(CRT_LIB_X64)
 endif
-ifneq (,$(filter arm arm32 arm32_def atlarm atlarm32,$(MAKECMDGOALS)))
+ifneq (,$(filter $(arm32_targets),$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_ARM32)
  SDK_PACKAGES += $(SDK_LIB_ARM32)
 endif
@@ -442,7 +451,7 @@ endif
 ifneq (,$(filter all atl atl32 atl64,$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_ATL_X86) $(CRT_LIB_ATL_X64)
 endif
-ifneq (,$(filter atlarm atlarm32,$(MAKECMDGOALS)))
+ifneq (,$(filter $(atlarm32_targets),$(MAKECMDGOALS)))
  PACKAGES += $(CRT_LIB_ATL_ARM32)
  SDK_PACKAGES += $(SDK_LIB_ARM32)
 endif
@@ -469,12 +478,12 @@ PACKAGES += $(SDK_PACKAGES)
 
 override undefine target_list
 target_list = all intel arm x86 x64 arm32 arm64 atl atlarm atl32 atl64 \
- atlarm32 atlarm64 asan sdk default intel_def arm32_def arm64_def
+  atlarm32 atlarm64 asan sdk default intel_def arm32_def arm64_def
 $(foreach target,$(target_list),$(eval END_$(target)=))
 
 ifeq (,$(filter onlydl,$(MAKECMDGOALS)))
  END_$(or $(lastword $(filter $(target_list),$(MAKECMDGOALS))),\
-  $(.DEFAULT_GOAL)) = $(MSVC_LIBS_DIR)/
+   $(.DEFAULT_GOAL)) = $(MSVC_LIBS_DIR)/
 endif
 NO_DL := $(if $(filter nodl,$(MAKECMDGOALS)),1)
 PREVIEW := $(if $(filter preview,$(MAKECMDGOALS)),1)
@@ -485,12 +494,12 @@ ATLARM32_PACKAGES = $(CRT_LIB_ATL_ARM32) $(CRT_LIB_ARM32)
 ATLARM64_PACKAGES = $(CRT_LIB_ATL_ARM64) $(CRT_LIB_ARM64)
 
 .PHONY: $(target_list) onlydl nodl preview help \
- clean clean-all clean-dl clean-msvc clean-sdk clean-atl
+  clean clean-all clean-dl clean-msvc clean-sdk clean-atl
 
 default: $(.DEFAULT_GOAL) $(END_default)
 
 all: $(ATL_PACKAGES) $(ATLARM64_PACKAGES) $(CRT_LIB_ASAN) \
- $(SDK_PACKAGES) $(END_all)
+  $(SDK_PACKAGES) $(END_all)
 intel_def: $(INTEL_PACKAGES) $(SDK_PACKAGES) $(END_intel_def)
 arm32_def: $(CRT_LIB_ARM32) $(SDK_PACKAGES) $(END_arm32_def)
 arm64_def: $(CRT_LIB_ARM64) $(SDK_PACKAGES) $(END_arm64_def)
@@ -643,9 +652,10 @@ else
 endif
 
 #
-# Arm32 support for SDK 26100+
+# Arm32 support for SDK 26100+ and Visual Studio < 18
 #
-ifeq (,$(call INTCMP,$(SDK_VERSION),26100,1,))
+ifneq (,$(and $(call INTCMP,$(SDK_VERSION),26100,,1),$\
+   $(call INTCMP,$(VS_MAJOR_VERSION),18,1,)))
  ifdef NATIVEWIN
   override undefine wdir_lib
   override undefine wdir_arm32_lib
@@ -665,7 +675,7 @@ $(SDK_LIB_ARM32): $(SDKARM32_LIB) $(SDK_LIB)
 	copy /y "$(wdir_arm32_inc)\shared\k?arm.h" "$(wdir_inc)\shared\" >nul
 	copy /y "$(wdir_arm32_inc)\shared\kxarmunw.h" "$(wdir_inc)\shared\" >nul
 	@for %%f in (clfsmgmt.lib drt.lib drtprov.lib drttransport.lib elfapi.lib \
-	MSAJApi.lib p2p.lib p2pgraph.lib) do del "$(wdir_lib)\um\arm\%%f"
+	 MSAJApi.lib p2p.lib p2pgraph.lib) do del "$(wdir_lib)\um\arm\%%f"
  else
 	@mkdir -p "$(SDK_LIB_DIR)/ucrt/arm"
 	cp -rf "$(SDKARM32_LIB_DIR)/ucrt/arm/" "$(SDK_LIB_DIR)/ucrt/"
@@ -675,7 +685,7 @@ $(SDK_LIB_ARM32): $(SDKARM32_LIB) $(SDK_LIB)
 	cp -f "$(SDKARM32_INC_DIR)"/shared/k?arm.h "$(SDK_INC_DIR)/shared"
 	cp -f "$(SDKARM32_INC_DIR)"/shared/kxarmunw.h "$(SDK_INC_DIR)/shared"
 	@for f in clfsmgmt.lib drt.lib drtprov.lib drttransport.lib elfapi.lib \
-	MSAJApi.lib p2p.lib p2pgraph.lib; do rm -f "$(SDK_LIB_DIR)/um/arm/$$f"; done
+	 MSAJApi.lib p2p.lib p2pgraph.lib; do rm -f "$(SDK_LIB_DIR)/um/arm/$$f"; done
  endif
 else
  $(SDK_LIB_ARM32): $(SDK_LIB)
