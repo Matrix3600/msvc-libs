@@ -1,5 +1,5 @@
 #
-# MSVC-Libs 1.2
+# MSVC-Libs 1.3
 #
 # Makefile (version for GNU make, Windows or Linux)
 #
@@ -74,7 +74,8 @@ Parameters to choose which packages to download:
 
 The downloaded packages are indicated in brackets.
 
-arm32/atlarm32 are no longer available in Visual Studio 18 and up.
+arm32/atlarm32 and sdkver=19041 are no longer available in Visual Studio 18
+and up.
 
 Other parameters:
   help          Display this help message.
@@ -153,15 +154,18 @@ space := $(empty) $(empty)
 ESC_SPACE = $(subst $(space),\ ,$(1))
 
 # $(intcmp ...) function requires Make 4.4+ (2022-10).
+# If 5th argument is missing or empty, it defaults to 4th.
 ifeq (4.4,$(firstword $(sort $(MAKE_VERSION) 4.4)))
- INTCMP = $(intcmp $(1),$(2),$(3),$(4))
+ INTCMP = $(intcmp $(1),$(2),$(3),$(4),$(or $(5),$(4)))
 else
  # Alternative for older versions
  ifdef NATIVEWIN
   INTCMP = $(shell if $(or $(strip $(1)),0) lss $(or $(strip $(2)),0) \
-    (echo;$(3)) else echo;$(4))
+    (echo;$(3)) else if $(or $(strip $(1)),0) gtr $(or $(strip $(2)),0) \
+    (echo;$(or $(5),$(4))) else echo;$(4))
  else
-  INTCMP = $(shell [ "$(1)" -lt "$(2)" ] && echo "$(3)" || echo "$(4)")
+  INTCMP = $(shell [ "$(1)" -lt "$(2)" ] && echo "$(3)" || \
+    { [ "$(1)" -gt "$(2)" ] && echo "$(or $(5),$(4))" || echo "$(4)"; })
  endif
 endif
 
@@ -233,6 +237,10 @@ _pos = $(if $(filter $1,$2),$(call _pos,$1,\
 pos = $(words $(call _pos,$1,$2))
 LOOKUP = $(word $(call pos,$1,$2),$3)
 
+# Minimum and maximum major versions of Visual Studio supported
+VS_MIN_MAJOR_VERSION = 15
+VS_MAX_MAJOR_VERSION = 18
+
 # List of Visual Studio versions
 VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8
 VS_VERSIONS = 16.9  16.10 16.11 17.0  17.1  17.2  17.3  17.4  17.5  17.6 \
@@ -251,7 +259,7 @@ VSVER_TO_VCVER = $(call LOOKUP,$1,$(VS_VERSIONS_1) $(VS_VERSIONS),$\
 VC_TOOLS_VER = Tools
 VC_VERSION =
 VC_PREFIX =
-VS_MAJOR_VERSION = 18
+VS_MAJOR_VERSION = $(VS_MAX_MAJOR_VERSION)
 
 ifdef vsver
  override undefine vs_ver_list
@@ -259,6 +267,10 @@ ifdef vsver
  ifeq (1,$(words $(vs_ver_list)))
   # Select the latest unversioned packages for the specified major version of
   # Visual Studio
+  ifneq (,$(or $(call INTCMP,$(vsver),$(VS_MIN_MAJOR_VERSION),1,),$\
+      $(call INTCMP,$(vsver),$(VS_MAX_MAJOR_VERSION),,,1)))
+    $(error ERROR: Visual Studio $(vsver) is not supported)
+  endif
   VS_MAJOR_VERSION := $(vsver)
  else
   ifneq (2,$(words $(vs_ver_list)))
@@ -289,17 +301,21 @@ ifdef vsver
  override undefine vsver
 endif
 
+VS15_SDK_VERSIONS = 19041
+VS16_SDK_VERSIONS = 19041 22621
+VS17_SDK_VERSIONS = 19041 22621 26100
+VS18_SDK_VERSIONS = 22621 26100
+
 ifdef sdkver
+ ifeq (,$(filter $(sdkver),$(VS$(VS_MAJOR_VERSION)_SDK_VERSIONS)))
+  $(error ERROR: SDK $(sdkver) is not supported by Visual Studio $\
+    $(VS_MAJOR_VERSION))
+ endif
  SDK_VERSION := $(sdkver)
  override undefine sdkver
 else
- ifeq (,$(call INTCMP,$(VS_MAJOR_VERSION),16,,1))
-  SDK_VERSION = 19041
- else ifeq (,$(call INTCMP,$(VS_MAJOR_VERSION),17,,1))
-  SDK_VERSION = 22621
- else
-  SDK_VERSION = 26100
- endif
+ SDK_VERSION := $(word $(words $(VS$(VS_MAJOR_VERSION)_SDK_VERSIONS)),$\
+   $(VS$(VS_MAJOR_VERSION)_SDK_VERSIONS))
 endif
 
 # -----------------------------------------------------------------------------
