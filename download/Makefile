@@ -487,6 +487,11 @@ ifndef PACKAGES
  PACKAGES += $(DEFAULT_CRT_PACKAGES)
 endif
 
+# Additional targets that do not download the required CRT packages
+ifneq (,$(filter all asan,$(MAKECMDGOALS)))
+ PACKAGES += $(CRT_LIB_ASAN)
+endif
+
 # The SDK is required to build the library
 SDK_PACKAGES += $(SDK_LIB)
 
