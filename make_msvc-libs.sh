@@ -34,6 +34,11 @@
 #       the same directory as this script).
 #   -q  Do not ask for confirmation before starting.
 #
+# If the user configuration file (make_msvc-libs_user.txt) is present, it takes
+# precedence over the default configuration file (make_msvc-libs_conf.txt).
+# This ensures that the user configuration is preserved when the application is
+# updated.
+#
 
 # This script searches for root directories containing source files ("VC" and
 # "Windows Kits") in the same directory as this script. Subdirectories are
@@ -44,7 +49,6 @@
 # VCToolsInstallDir="<custom_location_of_MSVC>/VC/Tools/MSVC/14.44.35128"
 # WindowsSdkDir="<custom_location_of_SDK>/Windows Kits/10"
 # WindowsSDKVersion="10.0.26100.0"
-
 
 main() {
 

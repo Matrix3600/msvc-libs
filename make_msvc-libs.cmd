@@ -34,6 +34,11 @@
 ::        the same directory as this script).
 ::   /q   Do not ask for confirmation before starting.
 ::
+:: If the user configuration file (make_msvc-libs_user.txt) is present, it
+:: takes precedence over the default configuration file
+:: (make_msvc-libs_conf.txt). This ensures that the user configuration is
+:: preserved when the application is updated.
+::
 
 :: Visual Studio installation directory (if applicable),
 :: e.g., C:\Program Files\Microsoft Visual Studio\2022\Community.
