@@ -45,7 +45,8 @@ setlocal DisableDelayedExpansion
 set "exit_code=0"
 
 set "msvc_dirname=msvc-libs"
-set "config_file=make_msvc-libs_conf.txt"
+set "config_file=make_msvc-libs_user.txt"
+set "config_file_default=make_msvc-libs_conf.txt"
 
 set "interactive="
 echo %cmdcmdline%| find /i "%~0" >nul
@@ -107,6 +108,7 @@ for /f %%i in ('%pwsh_exec% -c "$PSVersionTable.PSVersion.Major" 2^>nul') do (
 if %pwsh_ver% lss 3 goto error_powershell
 :pwsh_ok
 
+if not exist "%script_dir%\%config_file%" set "config_file=%config_file_default%"
 if not exist "%script_dir%\%config_file%" (
 	echo ERROR: Configuration file not found: "%config_file%".
 	set "exit_code=2"

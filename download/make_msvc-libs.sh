@@ -49,7 +49,8 @@
 main() {
 
 msvc_dirname="msvc-libs"
-config_file="make_msvc-libs_conf.txt"
+config_file="make_msvc-libs_user.txt"
+config_file_default="make_msvc-libs_conf.txt"
 
 interactive=false
 if [ -z "$SHLVL" ] || [ "$SHLVL" = 1 ]; then interactive=true; fi
@@ -72,8 +73,8 @@ while [[ $# -gt 0 ]]; do
 					exit_script 1
 			esac
 			arg=${arg:1}
-		done	
-	else	
+		done
+	else
 		echo "ERROR: Invalid argument."
 		exit_script 1
 	fi
@@ -87,6 +88,9 @@ if [ $? != 0 ]; then exit_script 10; fi
 
 echo
 
+if [ ! -f "$script_dir/$config_file" ]; then
+	config_file=$config_file_default
+fi
 if [ ! -f "$script_dir/$config_file" ]; then
 	echo "ERROR: Configuration file not found: \"$config_file\"."
 	exit_script 2
@@ -200,7 +204,7 @@ do
 		elif [ "$opt_include" = 0 ]; then
 			echo Directory not found \"[$type]$source\".
 			error_copy
-		fi	
+		fi
 	fi
 done 3<"$script_dir/$config_file"
 
@@ -309,7 +313,7 @@ search_path() {
 search_local_path() {
 	local msvc_crt_source="VC/Tools/MSVC"
 	local msvc_sdk_source="Windows Kits"
-	
+
 	if [ ! -d "$msvc_crt_source" ]; then return 2; fi
 	if [ ! -d "$msvc_sdk_source" ]; then return 3; fi
 	local version="$({ cd "$msvc_crt_source" && ls -dv -- */ | tail -n 1; } \

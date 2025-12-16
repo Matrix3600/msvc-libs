@@ -6,3 +6,4 @@
 *.o
 *.out
 *.res
+make_msvc-libs_user.txt
