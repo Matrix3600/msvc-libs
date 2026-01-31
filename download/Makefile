@@ -228,6 +228,33 @@ else
  endif
 endif
 
+# Minimum and maximum major versions of Visual Studio supported
+VS_MIN_MAJOR_VERSION = 15
+VS_MAX_MAJOR_VERSION = 18
+
+# List of Visual Studio versions
+VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8
+VS_VERSIONS_2 = 16.9  16.10 16.11 17.0  17.1  17.2  17.3  17.4  17.5  17.6 \
+  17.7  17.8  17.9  17.10 17.11 17.12 17.13 17.14 18.0
+# List of corresponding MSVC Build Tools versions
+VC_VERSIONS_1 = 14.20 14.21 14.22 14.23 14.24 14.25 14.26 14.27 14.28
+VC_VERSIONS_2 = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
+  14.37 14.38 14.39 14.40 14.41 14.42 14.43 14.44 14.50
+
+# List of VS version groups having the same Build Tools package version
+VS_VERSION_GROUPS = 18.0/18.1/18.2
+
+# VSVER_TO_VSVER_GROUP: Search for VS version group from VS version
+override undefine _group
+_group = $(if $(filter $1,$2),$(firstword $2))
+VSVER_TO_VSVER_GROUP = $(if $2,$(or $\
+  $(call _group,$1,$(subst /, ,$(firstword $2))),$\
+  $(call VSVER_TO_VSVER_GROUP,$1,$(wordlist 2,$(words $2),$2))))
+
+# VSVER_TO_VCVER: Convert Visual Studio version to MSVC Build Tools version
+VSVER_TO_VCVER = $(call LOOKUP,$1,$(VS_VERSIONS_1) $(VS_VERSIONS_2),$\
+  $(VC_VERSIONS_1) $(VC_VERSIONS_2))
+
 # LOOKUP: Find an element in a list and return the corresponding element in
 # another list.
 override undefine _pos
@@ -236,25 +263,6 @@ _pos = $(if $(filter $1,$2),$(call _pos,$1,\
          $(wordlist 2,$(words $2),$2),x $3),$3)
 pos = $(words $(call _pos,$1,$2))
 LOOKUP = $(word $(call pos,$1,$2),$3)
-
-# Minimum and maximum major versions of Visual Studio supported
-VS_MIN_MAJOR_VERSION = 15
-VS_MAX_MAJOR_VERSION = 18
-
-# List of Visual Studio versions
-VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8 \
-  18.1       18.2
-VS_VERSIONS_2 = 16.9  16.10 16.11 17.0  17.1  17.2  17.3  17.4  17.5  17.6 \
-  17.7  17.8  17.9  17.10 17.11 17.12 17.13 17.14 18.0
-# List of corresponding MSVC Build Tools versions
-VC_VERSIONS_1 = 14.20 14.21 14.22 14.23 14.24 14.25 14.26 14.27 14.28 \
-  14.50.18.0 14.50.18.0
-VC_VERSIONS_2 = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
-  14.37 14.38 14.39 14.40 14.41 14.42 14.43 14.44 14.50
-
-# Convert Visual Studio version to MSVC Build Tools version
-VSVER_TO_VCVER = $(call LOOKUP,$1,$(VS_VERSIONS_1) $(VS_VERSIONS_2),$\
-  $(VC_VERSIONS_1) $(VC_VERSIONS_2))
 
 # By default, select the latest unversioned packages for the latest major
 # version of Visual Studio
@@ -270,8 +278,8 @@ ifdef vsver
   # Select the latest unversioned packages for the specified major version of
   # Visual Studio
   ifneq (,$(or $(call INTCMP,$(vsver),$(VS_MIN_MAJOR_VERSION),1,),$\
-      $(call INTCMP,$(vsver),$(VS_MAX_MAJOR_VERSION),,,1)))
-    $(error ERROR: Visual Studio $(vsver) is not supported)
+     $(call INTCMP,$(vsver),$(VS_MAX_MAJOR_VERSION),,,1)))
+   $(error ERROR: Visual Studio $(vsver) is not supported)
   endif
   VS_MAJOR_VERSION := $(vsver)
  else
@@ -279,17 +287,21 @@ ifdef vsver
    $(error ERROR: $(vsver) is not a valid version (x.x))
   endif
 
-  ifeq (,$(filter $(vsver),$(VS_VERSIONS_1) $(VS_VERSIONS_2)))
-   $(error ERROR: $(vsver) is not a supported version of Visual Studio)
+  override undefine base_vsver
+  base_vsver := $(or $\
+    $(call VSVER_TO_VSVER_GROUP,$(vsver),$(VS_VERSION_GROUPS)),$(vsver))
+
+  ifeq (,$(filter $(base_vsver),$(VS_VERSIONS_1) $(VS_VERSIONS_2)))
+   $(error ERROR: $(base_vsver) is not a supported version of Visual Studio)
   endif
 
   override undefine vc_ver
-  vc_ver := $(call VSVER_TO_VCVER,$(vsver))
+  vc_ver := $(call VSVER_TO_VCVER,$(base_vsver))
 
-  ifneq (,$(filter $(vsver),$(VS_VERSIONS_1)))
+  ifneq (,$(filter $(base_vsver),$(VS_VERSIONS_1)))
    VC_TOOLS_VER := $(vc_ver)
   else
-   VC_TOOLS_VER := $(vc_ver).$(vsver)
+   VC_TOOLS_VER := $(vc_ver).$(base_vsver)
   endif
   VC_VERSION := $(VC_TOOLS_VER).
   override undefine vc_ver_list
