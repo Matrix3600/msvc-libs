@@ -17,7 +17,11 @@
 # Changes by Matrix3600:
 # 2025-04-24: Remove "DIA SDK" and "MSBuild" components.
 # 2025-04-26: Add language parameter.
-# 2025-05-09: Add new versions in setPackageSelection function.
+# 2025-06-09: Remove "patch packages" and "copy dependent assemblies"
+#             functionalities.
+# 2025-11-14: Set the default major version of VS to 18.
+# 2026-02-02: Remove "arm" from default architectures for VS >= 18.
+#             Add new versions in setPackageSelection function.
 
 import argparse
 import functools
@@ -128,7 +132,10 @@ def setPackageSelectionMSVC15(args, packages, userversion, sdk, toolversion, def
 
 def setPackageSelection(args, packages):
     if not args.architecture:
-        args.architecture = ["host", "x86", "x64", "arm", "arm64"]
+        if args.major < 18:
+            args.architecture = ["host", "x86", "x64", "arm", "arm64"]
+        else:
+            args.architecture = ["host", "x86", "x64", "arm64"]
     if args.host_arch is not None and "host" in args.architecture:
         args.architecture.append(args.host_arch)
 
@@ -201,7 +208,7 @@ def setPackageSelection(args, packages):
         setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.43.17.13", defaultPackages)
     elif args.msvc_version == "17.14":
         setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.44.17.14", defaultPackages)
-    elif args.msvc_version == "18.0":
+    elif args.msvc_version in ["18.0", "18.1", "18.2"]:
         setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.50.18.0", defaultPackages)
 
     elif args.msvc_version == "15.4":
