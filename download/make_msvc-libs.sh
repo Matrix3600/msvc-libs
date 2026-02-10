@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #
-# MSVC-Libs 1.4
+# MSVC-Libs 1.5
 #
 # make_msvc-libs.sh
 #
