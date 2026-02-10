@@ -61,7 +61,7 @@ Parameters to choose which packages to download:
   sdk           [Windows<winver>SDK.<sdkver>]
                 See below for values of <sdkver>.
 
-  vsver=x[.y]   Visual Studio version (15, 16.0 to 18.2) (default: 18).
+  vsver=x[.y]   Visual Studio version (15, 16.0 to 18.3) (default: 18).
                 If only the major version is specified (e.g., 17), the
                 latest unversioned MSVC packages are selected for this version.
                 If a full version is specified (e.g., 17.5), the corresponding
@@ -242,7 +242,7 @@ VC_VERSIONS_2 = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
   14.37 14.38 14.39 14.40 14.41 14.42 14.43 14.44 14.50
 
 # List of VS version groups having the same Build Tools package version
-VS_VERSION_GROUPS = 18.0/18.1/18.2
+VS_VERSION_GROUPS = 18.0/18.1/18.2/18.3
 
 # VSVER_TO_VSVER_GROUP: Search for VS version group from VS version
 override undefine _group
