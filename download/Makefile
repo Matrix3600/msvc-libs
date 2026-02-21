@@ -219,6 +219,9 @@ endif
 # Read parameters
 # -----------------------------------------------------------------------------
 
+NO_DL := $(if $(filter nodl,$(MAKECMDGOALS)),1)
+PREVIEW := $(if $(filter preview,$(MAKECMDGOALS)),1)
+
 ifdef lang
  DL_LANG := $(lang)
  override undefine lang
@@ -287,36 +290,43 @@ ifdef vsver
    $(error ERROR: $(vsver) is not a valid version (x.x))
   endif
 
-  override undefine base_vsver
-  base_vsver := $(or $\
-    $(call VSVER_TO_VSVER_GROUP,$(vsver),$(VS_VERSION_GROUPS)),$(vsver))
-
-  ifeq (,$(filter $(base_vsver),$(VS_VERSIONS_1) $(VS_VERSIONS_2)))
-   $(error ERROR: $(base_vsver) is not a supported version of Visual Studio)
-  endif
-
-  override undefine vc_ver
-  vc_ver := $(call VSVER_TO_VCVER,$(base_vsver))
-
-  ifneq (,$(filter $(base_vsver),$(VS_VERSIONS_1)))
-   VC_TOOLS_VER := $(vc_ver)
-  else
-   VC_TOOLS_VER := $(vc_ver).$(base_vsver)
-  endif
-  VC_VERSION := $(VC_TOOLS_VER).
-  override undefine vc_ver_list
-  vc_ver_list := $(subst ., ,$(vc_ver))
-  VC_PREFIX := $(subst $(space),.,$(wordlist 1,2,$(vc_ver_list))).
-
   ifeq (16.11,$(vsver))
    VS_MAJOR_VERSION = 17
   else
    VS_MAJOR_VERSION := $(firstword $(vs_ver_list))
   endif
+
+  ifeq (,$(and $(call INTCMP,$(VS_MAJOR_VERSION),18,,1),$(PREVIEW)))
+   override undefine base_vsver
+   base_vsver := $(or $\
+     $(call VSVER_TO_VSVER_GROUP,$(vsver),$(VS_VERSION_GROUPS)),$(vsver))
+
+   ifeq (,$(filter $(base_vsver),$(VS_VERSIONS_1) $(VS_VERSIONS_2)))
+    $(error ERROR: $(base_vsver) is not a supported version of Visual Studio)
+   endif
+
+   override undefine vc_ver
+   vc_ver := $(call VSVER_TO_VCVER,$(base_vsver))
+
+   ifneq (,$(filter $(base_vsver),$(VS_VERSIONS_1)))
+    VC_TOOLS_VER := $(vc_ver)
+   else
+    VC_TOOLS_VER := $(vc_ver).$(base_vsver)
+   endif
+   VC_VERSION := $(VC_TOOLS_VER).
+   override undefine vc_ver_list
+   vc_ver_list := $(subst ., ,$(vc_ver))
+   VC_PREFIX := $(subst $(space),.,$(wordlist 1,2,$(vc_ver_list))).
+  endif
  endif
 
  override undefine vsver
 endif
+
+ifneq (,$(and $(call INTCMP,$(VS_MAJOR_VERSION),18,,1),$(PREVIEW)))
+ VC_TOOLS_VER = Preview.Tools
+ VC_VERSION = Preview.
+endif 
 
 VS15_SDK_VERSIONS = 19041
 VS16_SDK_VERSIONS = 19041 22621
@@ -522,8 +532,6 @@ ifeq (,$(filter onlydl,$(MAKECMDGOALS)))
  END_$(or $(lastword $(filter $(target_list),$(MAKECMDGOALS))),\
    $(.DEFAULT_GOAL)) = $(MSVC_LIBS_DIR)/
 endif
-NO_DL := $(if $(filter nodl,$(MAKECMDGOALS)),1)
-PREVIEW := $(if $(filter preview,$(MAKECMDGOALS)),1)
 
 INTEL_PACKAGES = $(CRT_LIB_X86) $(CRT_LIB_X64)
 ATL_PACKAGES = $(CRT_LIB_ATL_X86) $(CRT_LIB_ATL_X64) $(INTEL_PACKAGES)
