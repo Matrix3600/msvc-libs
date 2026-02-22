@@ -458,10 +458,11 @@ CRT_LIB_ATL_X64 = $(ATL_DIR)/lib/x64/
 CRT_LIB_ATL_ARM32 = $(ATL_DIR)/lib/arm/
 CRT_LIB_ATL_ARM64 = $(ATL_DIR)/lib/arm64/
 
+CRT_LIB_ASAN =
 ifndef VC_PREFIX
- CRT_LIB_ASAN = $(CRT_ROOT_DIR)/$(CRT_VERSION)/include/sanitizer
-else
- CRT_LIB_ASAN =
+ ifeq (,$(and $(call INTCMP,$(VS_MAJOR_VERSION),18,,1),$(PREVIEW)))
+  CRT_LIB_ASAN = $(CRT_ROOT_DIR)/$(CRT_VERSION)/include/sanitizer
+ endif
 endif
 
 SDK_LIB = $(call ESC_SPACE,$(SDK_LIB_DIR))/
