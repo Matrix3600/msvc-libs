@@ -270,6 +270,7 @@ LOOKUP = $(word $(call pos,$1,$2),$3)
 # By default, select the latest unversioned packages for the latest major
 # version of Visual Studio
 VC_TOOLS_VER = Tools
+VC_TOOLS_VER_2 = $(VC_TOOLS_VER)
 VC_VERSION =
 VC_PREFIX =
 VS_MAJOR_VERSION = $(VS_MAX_MAJOR_VERSION)
@@ -325,6 +326,7 @@ endif
 
 ifneq (,$(and $(call INTCMP,$(VS_MAJOR_VERSION),18,,1),$(PREVIEW)))
  VC_TOOLS_VER = Preview.Tools
+ VC_TOOLS_VER_2 = Preview
  VC_VERSION = Preview.
 endif 
 
@@ -660,7 +662,7 @@ $(CRT_LIB_X86): $(CRT_LIB_X64)
 $(CRT_LIB_ATL_X86): $(CRT_LIB_ATL_X64)
 
 $(eval $(call DOWNLOAD_RULE,CRT_LIB_X64,VC.$(VC_TOOLS_VER).x86.x64))
-$(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM64,VC.$(VC_TOOLS_VER).ARM64))
+$(eval $(call DOWNLOAD_RULE,CRT_LIB_ARM64,VC.$(VC_TOOLS_VER_2).ARM64))
 $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_X64,VC.$(VC_VERSION)ATL))
 $(eval $(call DOWNLOAD_RULE,CRT_LIB_ATL_ARM64,VC.$(VC_VERSION)ATL.ARM64))
 ifndef VC_PREFIX
