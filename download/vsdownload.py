@@ -22,6 +22,8 @@
 # 2025-11-14: Set the default major version of VS to 18.
 # 2026-02-02: Remove "arm" from default architectures for VS >= 18.
 #             Add new versions in setPackageSelection function.
+# 2026-03-01: Exit with an error if one of the specified packages does not
+#             exist.
 
 import argparse
 import functools
@@ -836,6 +838,11 @@ if __name__ == "__main__":
 
     if args.print_version:
         sys.exit(0)
+
+    for p in args.package:
+        if not p.lower() in packages:
+            print("ERROR: %s not found" % (p))
+            sys.exit(2)
 
     if not args.accept_license:
         response = input("Do you accept the license at " + findPackage(packages, "Microsoft.VisualStudio.Product.BuildTools")["localizedResources"][0]["license"] + " (yes/no)? ")
