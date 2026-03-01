@@ -7,7 +7,7 @@ Studio library and create a repackaged standalone library from it.
 It runs on Windows or Linux.
 
 The original files are downloadable from the Microsoft servers. You
-must accept the [license](https://visualstudio.microsoft.com/license-terms/vs2026-ga-diagnostic-buildtools/).
+must accept the [license](https://go.microsoft.com/fwlink/?LinkId=2327714).
 
 Note that the Visual Studio library is not redistributable, so neither is the
 repackaged version.
