@@ -236,7 +236,7 @@ VS_MIN_MAJOR_VERSION = 15
 VS_MAX_MAJOR_VERSION = 18
 
 # List of Visual Studio versions
-VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8  18.4
+VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8  18.6
 VS_VERSIONS_2 = 16.9  16.10 16.11 17.0  17.1  17.2  17.3  17.4  17.5  17.6 \
   17.7  17.8  17.9  17.10 17.11 17.12 17.13 17.14 18.0
 # List of corresponding MSVC Build Tools versions
@@ -245,9 +245,9 @@ VC_VERSIONS_2 = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
   14.37 14.38 14.39 14.40 14.41 14.42 14.43 14.44 14.50
 
 # List of VS version groups having the same Build Tools package version
-VS_VERSION_GROUPS = 18.0/18.1/18.2/18.3
+VS_VERSION_GROUPS = 18.0/18.1/18.2/18.3/18.4/18.5
 # List of preview VS versions
-VS_PREVIEW_VERSIONS = 18.4 18.5
+VS_PREVIEW_VERSIONS = 18.4 18.5 18.6
 
 # VSVER_TO_VSVER_GROUP: Search for VS version group from VS version
 override undefine _group
