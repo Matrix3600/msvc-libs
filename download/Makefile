@@ -112,6 +112,30 @@ endef
 #     o libgcab-1.0-0 (1.2+)
 #
 
+# Minimum and maximum major versions of Visual Studio supported
+VS_MIN_MAJOR_VERSION = 15
+VS_MAX_MAJOR_VERSION = 18
+
+# List of Visual Studio versions
+VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8  18.6
+VS_VERSIONS_2 = 16.9  16.10 16.11 17.0  17.1  17.2  17.3  17.4  17.5  17.6 \
+  17.7  17.8  17.9  17.10 17.11 17.12 17.13 17.14 18.0
+# List of corresponding MSVC Build Tools versions
+VC_VERSIONS_1 = 14.20 14.21 14.22 14.23 14.24 14.25 14.26 14.27 14.28 14.51
+VC_VERSIONS_2 = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
+  14.37 14.38 14.39 14.40 14.41 14.42 14.43 14.44 14.50
+
+# List of VS version groups having the same Build Tools package version
+VS_VERSION_GROUPS = 18.0-18.5
+# List of preview VS versions
+VS_PREVIEW_VERSIONS = 18.4-18.6
+
+# List of SDK versions
+VS15_SDK_VERSIONS = 19041
+VS16_SDK_VERSIONS = 19041 22621
+VS17_SDK_VERSIONS = 19041 22621 26100
+VS18_SDK_VERSIONS = 22621 26100
+
 # -----------------------------------------------------------------------------
 # Detect system and check required files
 # -----------------------------------------------------------------------------
@@ -231,29 +255,25 @@ else
  endif
 endif
 
-# Minimum and maximum major versions of Visual Studio supported
-VS_MIN_MAJOR_VERSION = 15
-VS_MAX_MAJOR_VERSION = 18
-
-# List of Visual Studio versions
-VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8  18.6
-VS_VERSIONS_2 = 16.9  16.10 16.11 17.0  17.1  17.2  17.3  17.4  17.5  17.6 \
-  17.7  17.8  17.9  17.10 17.11 17.12 17.13 17.14 18.0
-# List of corresponding MSVC Build Tools versions
-VC_VERSIONS_1 = 14.20 14.21 14.22 14.23 14.24 14.25 14.26 14.27 14.28 14.51
-VC_VERSIONS_2 = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
-  14.37 14.38 14.39 14.40 14.41 14.42 14.43 14.44 14.50
-
-# List of VS version groups having the same Build Tools package version
-VS_VERSION_GROUPS = 18.0/18.1/18.2/18.3/18.4/18.5
-# List of preview VS versions
-VS_PREVIEW_VERSIONS = 18.4 18.5 18.6
+# COMPARE_VERSIONS_GTE: Compare two versions, greater or equal
+override undefine _cmp_ver
+_cmp_ver = $(if $1$2,$\
+  $(or $\
+    $(call INTCMP,$(or $(firstword $1),0),$(or $(firstword $2),0),-1,,1),$\
+    $(call _cmp_ver,$\
+      $(wordlist 2,$(words $1),$1),$(wordlist 2,$(words $2),$2))),$\
+  0)
+COMPARE_VERSIONS_GTE = $(filter-out -1,$\
+  $(call _cmp_ver,$(subst ., ,$1),$(subst ., ,$2)))
 
 # VSVER_TO_VSVER_GROUP: Search for VS version group from VS version
 override undefine _group
-_group = $(if $(filter $1,$2),$(firstword $2))
+_group = $(if $3,$(if $(and $\
+    $(call COMPARE_VERSIONS_GTE,$1,$2),$(call COMPARE_VERSIONS_GTE,$3,$1)),$\
+    $2),$\
+  $(filter $1,$2))
 VSVER_TO_VSVER_GROUP = $(if $2,$(or $\
-  $(call _group,$1,$(subst /, ,$(firstword $2))),$\
+  $(let a b x,$(subst -, ,$(firstword $2)),$(call _group,$1,$a,$b)),$\
   $(call VSVER_TO_VSVER_GROUP,$1,$(wordlist 2,$(words $2),$2))))
 
 # VSVER_TO_VCVER: Convert Visual Studio version to MSVC Build Tools version
@@ -283,10 +303,6 @@ ifdef vsver
  ifeq (1,$(words $(vs_ver_list)))
   # Select the latest unversioned packages for the specified major version of
   # Visual Studio
-  ifneq (,$(or $(call INTCMP,$(vsver),$(VS_MIN_MAJOR_VERSION),1,),$\
-     $(call INTCMP,$(vsver),$(VS_MAX_MAJOR_VERSION),,,1)))
-   $(error ERROR: Visual Studio $(vsver) is not supported)
-  endif
   VS_MAJOR_VERSION := $(vsver)
  else
   ifneq (2,$(words $(vs_ver_list)))
@@ -300,7 +316,7 @@ ifdef vsver
   endif
 
   ifeq (,$(and $(call INTCMP,$(VS_MAJOR_VERSION),18,,1),$(PREVIEW),$\
-     $(filter $(vsver),$(VS_PREVIEW_VERSIONS))))
+    $(call VSVER_TO_VSVER_GROUP,$(vsver),$(VS_PREVIEW_VERSIONS))))
    override undefine base_vsver
    base_vsver := $(or $\
      $(call VSVER_TO_VSVER_GROUP,$(vsver),$(VS_VERSION_GROUPS)),$(vsver))
@@ -327,6 +343,11 @@ ifdef vsver
  override undefine vsver
 endif
 
+ifneq (,$(or $(call INTCMP,$(VS_MAJOR_VERSION),$(VS_MIN_MAJOR_VERSION),1,),$\
+   $(call INTCMP,$(VS_MAJOR_VERSION),$(VS_MAX_MAJOR_VERSION),,,1)))
+ $(error ERROR: Visual Studio $(VS_MAJOR_VERSION) is not supported)
+endif
+
 ifneq (,$(and $(call INTCMP,$(VS_MAJOR_VERSION),18,,1),$(PREVIEW)))
  ifndef VC_PREFIX
   VC_TOOLS_VER = Preview.Tools
@@ -335,10 +356,9 @@ ifneq (,$(and $(call INTCMP,$(VS_MAJOR_VERSION),18,,1),$(PREVIEW)))
  endif 
 endif 
 
-VS15_SDK_VERSIONS = 19041
-VS16_SDK_VERSIONS = 19041 22621
-VS17_SDK_VERSIONS = 19041 22621 26100
-VS18_SDK_VERSIONS = 22621 26100
+ifndef VS$(VS_MAJOR_VERSION)_SDK_VERSIONS
+ $(error ERROR: VS$(VS_MAJOR_VERSION)_SDK_VERSIONS is not defined)
+endif
 
 ifdef sdkver
  ifeq (,$(filter $(sdkver),$(VS$(VS_MAJOR_VERSION)_SDK_VERSIONS)))
