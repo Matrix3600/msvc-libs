@@ -268,12 +268,14 @@ COMPARE_VERSIONS_GTE = $(filter-out -1,$\
 
 # VSVER_TO_VSVER_GROUP: Search for VS version group from VS version
 override undefine _group
+override undefine _get_group
 _group = $(if $3,$(if $(and $\
     $(call COMPARE_VERSIONS_GTE,$1,$2),$(call COMPARE_VERSIONS_GTE,$3,$1)),$\
     $2),$\
   $(filter $1,$2))
+_get_group = $(call _group,$1,$(firstword $2),$(word 2,$2))
 VSVER_TO_VSVER_GROUP = $(if $2,$(or $\
-  $(let a b x,$(subst -, ,$(firstword $2)),$(call _group,$1,$a,$b)),$\
+  $(call _get_group,$1,$(subst -, ,$(firstword $2))),$\
   $(call VSVER_TO_VSVER_GROUP,$1,$(wordlist 2,$(words $2),$2))))
 
 # VSVER_TO_VCVER: Convert Visual Studio version to MSVC Build Tools version
@@ -353,8 +355,8 @@ ifneq (,$(and $(call INTCMP,$(VS_MAJOR_VERSION),18,,1),$(PREVIEW)))
   VC_TOOLS_VER = Preview.Tools
   VC_TOOLS_VER_2 = Preview
   VC_VERSION = Preview.
- endif 
-endif 
+ endif
+endif
 
 ifndef VS$(VS_MAJOR_VERSION)_SDK_VERSIONS
  $(error ERROR: VS$(VS_MAJOR_VERSION)_SDK_VERSIONS is not defined)
