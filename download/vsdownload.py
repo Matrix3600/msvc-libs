@@ -24,6 +24,7 @@
 #             Add new versions in setPackageSelection function.
 # 2026-03-01: Exit with an error if one of the specified packages does not
 #             exist.
+# 2026-03-05: Add support for MSVC previews and VS >= 18.
 
 import argparse
 import functools
@@ -101,9 +102,14 @@ def getArgsParser():
     return parser
 
 def setPackageSelectionMSVC16(args, packages, userversion, sdk, toolversion, defaultPackages):
-    if findPackage(packages, "Microsoft.VisualStudio.Component.VC." + toolversion + ".x86.x64", warn=False):
+    tools = ""
+    if args.preview and args.major >= 18:
+        toolversion = "Preview"
+        tools = ".Tools"
+
+    if findPackage(packages, "Microsoft.VisualStudio.Component.VC." + toolversion + tools + ".x86.x64", warn=False):
         if "x86" in args.architecture or "x64" in args.architecture:
-            args.package.append("Microsoft.VisualStudio.Component.VC." + toolversion + ".x86.x64")
+            args.package.append("Microsoft.VisualStudio.Component.VC." + toolversion + tools + ".x86.x64")
             args.package.append("Microsoft.VC." + toolversion + ".ASAN.X86")
             args.package.append("Microsoft.VisualStudio.Component.VC." + toolversion + ".ATL")
         if "arm" in args.architecture:
@@ -210,8 +216,10 @@ def setPackageSelection(args, packages):
         setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.43.17.13", defaultPackages)
     elif args.msvc_version == "17.14":
         setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.44.17.14", defaultPackages)
-    elif args.msvc_version in ["18.0", "18.1", "18.2", "18.3"]:
+    elif args.msvc_version in ["18.0", "18.1", "18.2", "18.3", "18.4"]:
         setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.50.18.0", defaultPackages)
+    elif args.msvc_version == None and args.preview and args.major >= 18:
+        setPackageSelectionMSVC16(args, packages, args.major, "10.0.26100", "", defaultPackages)
 
     elif args.msvc_version == "15.4":
         setPackageSelectionMSVC15(args, packages, args.msvc_version, "10.0.16299", "14.11", defaultPackages)
