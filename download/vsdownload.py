@@ -21,10 +21,12 @@
 #             functionalities.
 # 2025-11-14: Set the default major version of VS to 18.
 # 2026-02-02: Remove "arm" from default architectures for VS >= 18.
-#             Add new versions in setPackageSelection function.
 # 2026-03-01: Exit with an error if one of the specified packages does not
 #             exist.
 # 2026-03-05: Add support for MSVC previews and VS >= 18.
+#             Add new versions in setPackageSelection function.
+# 2026-03-06: Remove redundant "Microsoft.VC.<version>.ASAN.X86" package already
+#             included in "Microsoft.VisualStudio.Component.VC.<version>.x86.x64".
 
 import argparse
 import functools
@@ -102,15 +104,11 @@ def getArgsParser():
     return parser
 
 def setPackageSelectionMSVC16(args, packages, userversion, sdk, toolversion, defaultPackages):
-    tools = ""
-    if args.preview and args.major >= 18:
-        toolversion = "Preview"
-        tools = ".Tools"
+    tools = ".Tools" if toolversion == "Preview" else ""
 
     if findPackage(packages, "Microsoft.VisualStudio.Component.VC." + toolversion + tools + ".x86.x64", warn=False):
         if "x86" in args.architecture or "x64" in args.architecture:
             args.package.append("Microsoft.VisualStudio.Component.VC." + toolversion + tools + ".x86.x64")
-            args.package.append("Microsoft.VC." + toolversion + ".ASAN.X86")
             args.package.append("Microsoft.VisualStudio.Component.VC." + toolversion + ".ATL")
         if "arm" in args.architecture:
             args.package.append("Microsoft.VisualStudio.Component.VC." + toolversion + ".ARM")
@@ -216,10 +214,14 @@ def setPackageSelection(args, packages):
         setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.43.17.13", defaultPackages)
     elif args.msvc_version == "17.14":
         setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.44.17.14", defaultPackages)
-    elif args.msvc_version in ["18.0", "18.1", "18.2", "18.3", "18.4"]:
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.50.18.0", defaultPackages)
+
     elif args.msvc_version == None and args.preview and args.major >= 18:
-        setPackageSelectionMSVC16(args, packages, args.major, "10.0.26100", "", defaultPackages)
+        setPackageSelectionMSVC16(args, packages, args.major, "10.0.26100", "Preview", defaultPackages)
+    elif args.preview and args.msvc_version in ["18.4", "18.5", "18.6"]:
+        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "Preview", defaultPackages)
+
+    elif args.msvc_version in ["18.0", "18.1", "18.2", "18.3", "18.4", "18.5"]:
+        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.50.18.0", defaultPackages)
 
     elif args.msvc_version == "15.4":
         setPackageSelectionMSVC15(args, packages, args.msvc_version, "10.0.16299", "14.11", defaultPackages)
