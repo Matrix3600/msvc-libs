@@ -2,7 +2,7 @@ Download the Visual Studio MSVC/SDK library
 ===========================================
 
 The original files are downloadable from the Microsoft servers. You
-must accept the [license](https://go.microsoft.com/fwlink/?LinkId=2179911).
+must accept the [license](https://go.microsoft.com/fwlink/?LinkId=2327714).
 
 You can use the `vsdownload.py` _Python_ script to download the files.
 
