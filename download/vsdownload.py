@@ -215,9 +215,9 @@ def setPackageSelection(args, packages):
     elif args.msvc_version == "17.14":
         setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.44.17.14", defaultPackages)
 
-    elif args.msvc_version == None and args.preview and args.major >= 18:
+    elif args.preview and args.msvc_version == None and args.major >= 18:
         setPackageSelectionMSVC16(args, packages, args.major, "10.0.26100", "Preview", defaultPackages)
-    elif args.preview and args.msvc_version in ["18.4", "18.5", "18.6"]:
+    elif args.preview and args.msvc_version in ["18.5", "18.6", "18.7", "18.8", "18.9", "18.10", "18.11"]:
         setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "Preview", defaultPackages)
 
     elif args.msvc_version in ["18.0", "18.1", "18.2", "18.3", "18.4", "18.5"]:

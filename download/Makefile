@@ -128,7 +128,7 @@ VC_VERSIONS_2 = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
 # List of VS version groups having the same Build Tools package version
 VS_VERSION_GROUPS = 18.0-18.5
 # List of preview VS versions
-VS_PREVIEW_VERSIONS = 18.4-18.6
+VS_PREVIEW_VERSIONS = 18.5-18.11
 
 # List of SDK versions
 VS15_SDK_VERSIONS = 19041
