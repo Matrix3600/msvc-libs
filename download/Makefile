@@ -127,8 +127,6 @@ VC_VERSIONS_2 = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
 
 # List of VS version groups having the same Build Tools package version
 VS_VERSION_GROUPS = 18.0-18.5
-# List of preview VS versions
-VS_PREVIEW_VERSIONS = 18.5-18.11
 
 # List of SDK versions
 VS15_SDK_VERSIONS = 19041
@@ -317,29 +315,26 @@ ifdef vsver
    VS_MAJOR_VERSION := $(firstword $(vs_ver_list))
   endif
 
-  ifeq (,$(and $(call INTCMP,$(VS_MAJOR_VERSION),18,,1),$(PREVIEW),$\
-    $(call VSVER_TO_VSVER_GROUP,$(vsver),$(VS_PREVIEW_VERSIONS))))
-   override undefine base_vsver
-   base_vsver := $(or $\
-     $(call VSVER_TO_VSVER_GROUP,$(vsver),$(VS_VERSION_GROUPS)),$(vsver))
+  override undefine base_vsver
+  base_vsver := $(or $\
+    $(call VSVER_TO_VSVER_GROUP,$(vsver),$(VS_VERSION_GROUPS)),$(vsver))
 
-   ifeq (,$(filter $(base_vsver),$(VS_VERSIONS_1) $(VS_VERSIONS_2)))
-    $(error ERROR: $(base_vsver) is not a supported version of Visual Studio)
-   endif
-
-   override undefine vc_ver
-   vc_ver := $(call VSVER_TO_VCVER,$(base_vsver))
-
-   ifneq (,$(filter $(base_vsver),$(VS_VERSIONS_1)))
-    VC_TOOLS_VER := $(vc_ver)
-   else
-    VC_TOOLS_VER := $(vc_ver).$(base_vsver)
-   endif
-   VC_VERSION := $(VC_TOOLS_VER).
-   override undefine vc_ver_list
-   vc_ver_list := $(subst ., ,$(vc_ver))
-   VC_PREFIX := $(subst $(space),.,$(wordlist 1,2,$(vc_ver_list))).
+  ifeq (,$(filter $(base_vsver),$(VS_VERSIONS_1) $(VS_VERSIONS_2)))
+   $(error ERROR: $(base_vsver) is not a supported version of Visual Studio)
   endif
+
+  override undefine vc_ver
+  vc_ver := $(call VSVER_TO_VCVER,$(base_vsver))
+
+  ifneq (,$(filter $(base_vsver),$(VS_VERSIONS_1)))
+   VC_TOOLS_VER := $(vc_ver)
+  else
+   VC_TOOLS_VER := $(vc_ver).$(base_vsver)
+  endif
+  VC_VERSION := $(VC_TOOLS_VER).
+  override undefine vc_ver_list
+  vc_ver_list := $(subst ., ,$(vc_ver))
+  VC_PREFIX := $(subst $(space),.,$(wordlist 1,2,$(vc_ver_list))).
  endif
 
  override undefine vsver
