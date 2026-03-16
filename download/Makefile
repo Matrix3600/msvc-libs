@@ -61,7 +61,7 @@ Parameters to choose which packages to download:
   sdk           [Windows<winver>SDK.<sdkver>]
                 See below for values of <sdkver>.
 
-  vsver=x[.y]   Visual Studio version (15, 16.0 to 18.3) (default: 18).
+  vsver=x[.y]   Visual Studio version (15, 16.0 to 18.6) (default: 18).
                 If only the major version is specified (e.g., 17), the
                 latest unversioned MSVC packages are selected for this version.
                 If a full version is specified (e.g., 17.5), the corresponding
