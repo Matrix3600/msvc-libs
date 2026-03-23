@@ -60,13 +60,9 @@ Visual Studio library
 
 If Visual Studio is installed, the scripts are immediately usable.
 
-Otherwise, the original files are downloadable from the Microsoft servers.
-
-Follow these [instructions](/download/download_vslib.md) to download the Visual
-Studio MSVC/SDK library.
-
-You can also use a [Makefile](/download/README.md) which downloads the files
-and creates the repackaged library in one operation.
+Otherwise, use this [Makefile](/download/README.md) which downloads the
+original files from the Microsoft servers and creates the repackaged library in
+one operation.
 
 
 
@@ -85,7 +81,11 @@ uncomment the line corresponding to `SDK_LIB`, `ucrt`.
 Running the script
 ------------------
 
-The script must know where the Visual Studio library is located.
+If you downloaded the files using the [Makefile](/download/README.md) as
+described above, the script was launched automatically. You can skip the
+content of this section.
+
+Otherwise, the script must know where the Visual Studio library is located.
 
 There are two possibilities:
 
@@ -99,10 +99,8 @@ but it may not work for you. In this case, you can:
   shortcut. It sets the necessary environment variables automatically.
 
 - Visual Studio is not installed.  
-If you downloaded the files as shown above, simply place the script and its 
-configuration file in the download directory. 
-Otherwise, you must specify the path and version of the tools (MSVC and SDK)
-in the variables at the beginning of the script.
+Simply place the script and its configuration file in the directory where you
+downloaded the Visual Studio library files.
 
 Choose the `make_msvc-libs` script (`.cmd` or `.sh`) that matches your system
 (Windows or Linux). The configuration file should be next to the script.
