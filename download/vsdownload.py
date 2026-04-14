@@ -98,7 +98,7 @@ def getArgsParser():
     parser.add_argument("--with-wdk-installers", metavar="dir", help="Install Windows Driver Kit using the provided MSI installers")
     parser.add_argument("--host-arch", metavar="arch", choices=["x86", "x64", "arm64"], help="Specify the host architecture of packages to install")
     parser.add_argument("--only-host", default=True, action=OptionalBoolean, help="Only download packages that match host arch")
-    parser.add_argument("--language", metavar="xx[-yy]", default="en", help="Preferred language code for packages available in multiple languages (default: en)")
+    parser.add_argument("--language", metavar="xx[-YY]", default="en", help="Preferred language code for packages available in multiple languages (defaults to en)")
     return parser
 
 def setPackageSelectionMSVC16(args, packages, userversion, sdk, toolversion, defaultPackages):
@@ -215,6 +215,8 @@ def setPackageSelection(args, packages):
         setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.44.17.14", defaultPackages)
     elif args.msvc_version in ["18.0", "18.1", "18.2", "18.3", "18.4", "18.5"]:
         setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.50.18.0", defaultPackages)
+    elif args.msvc_version in ["18.6", "18.7", "18.8", "18.9", "18.10", "18.11"]:
+        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.51", defaultPackages)
 
     elif args.msvc_version == "15.4":
         setPackageSelectionMSVC15(args, packages, args.msvc_version, "10.0.16299", "14.11", defaultPackages)
@@ -349,30 +351,26 @@ def prioritizePackage(arch, a, b):
         if r != 0:
             return r
 
-    if "language" in a and "language" in b:
-        lang = args.language.lower()
+    lang = args.language.lower()
+    countrylang = "-" in lang
+    alangpriority = 0
+    blangpriority = 0
+    if "language" in a:
         alang = a["language"].lower()
-        blang = b["language"].lower()
-        if "-" in lang:
-            apref = alang == lang
-            bpref = blang == lang
-        else:
-            apref = alang.startswith(lang + "-")
-            bpref = blang.startswith(lang + "-")
-        alangpriority = 0
-        blangpriority = 0
-        if apref:
+        if (countrylang and alang == lang) or (not countrylang and alang.startswith(lang + "-")):
             alangpriority = 2
         elif alang.startswith("en-"):
             alangpriority = 1
-        if bpref:
+    if "language" in b:
+        blang = b["language"].lower()
+        if (countrylang and blang == lang) or (not countrylang and blang.startswith(lang + "-")):
             blangpriority = 2
         elif blang.startswith("en-"):
             blangpriority = 1
-        if alangpriority > blangpriority:
-            return -1
-        if alangpriority < blangpriority:
-            return 1
+    if alangpriority > blangpriority:
+        return -1
+    if alangpriority < blangpriority:
+        return 1
     return 0
 
 def getPackages(manifest, arch):
@@ -596,7 +594,7 @@ def printPackageList(l):
         s = p["id"]
         if "type" in p:
             s = s + " (" + p["type"] + ")"
-        for k in ["chip", "machineArch", "productArch"]:
+        for k in ["version", "chip", "machineArch", "productArch"]:
             v = p.get(k)
             if v is not None:
                 s = s + " (" + k + "." + v + ")"

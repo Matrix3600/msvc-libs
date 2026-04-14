@@ -27,7 +27,7 @@
 #   by Martin Storsjo (https://github.com/mstorsjo/msvc-wine).
 #
 #   The original files are downloaded from the Microsoft servers. You need to
-#   accept the license https://go.microsoft.com/fwlink/?LinkId=2179911 .
+#   accept the license https://go.microsoft.com/fwlink/?LinkId=2327714 .
 #
 # - Rename the files and directories to lowercase for compatibility with
 #   case-sensitive systems (Linux).
@@ -61,7 +61,7 @@ Parameters to choose which packages to download:
   sdk           [Windows<winver>SDK.<sdkver>]
                 See below for values of <sdkver>.
 
-  vsver=x[.y]   Visual Studio version (15, 16.0 to 18.6) (default: 18).
+  vsver=x[.y]   Visual Studio version (15, 16.0 to 18.12) (default: 18).
                 If only the major version is specified (e.g., 17), the
                 latest unversioned MSVC packages are selected for this version.
                 If a full version is specified (e.g., 17.5), the corresponding
@@ -69,8 +69,10 @@ Parameters to choose which packages to download:
   sdkver=xxxxx  SDK version (19041,22621,26100)
                 (default: 26100 (VS 17/18), 22621 (VS 16) or 19041 (VS 15)).
   preview       Download preview versions instead of release versions.
-  lang=xx[-yy]  Preferred language code for packages available in multiple
-                languages (default: LANG environment variable, or "en").
+  lang=xx[-YY]  Preferred language code for packages available in multiple
+                languages (default: LANG environment variable, or "en")
+                (cs-CZ, de-DE, en-US, es-ES, fr-FR, it-IT, ja-JP, ko-KR, pl-PL,
+                pt-BR, ru-RU, tr-TR, zh-CN, zh-TW).
 
 The downloaded packages are indicated in brackets.
 
@@ -117,18 +119,20 @@ VS_MIN_MAJOR_VERSION = 15
 VS_MAX_MAJOR_VERSION = 18
 
 # List of Visual Studio versions
-VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8  18.6
+VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8  18.6 \
+  18.12
 VS_VERSIONS_2 = 16.9  16.10 16.11 17.0  17.1  17.2  17.3  17.4  17.5  17.6 \
   17.7  17.8  17.9  17.10 17.11 17.12 17.13 17.14 18.0
 # List of corresponding MSVC Build Tools versions
-VC_VERSIONS_1 = 14.20 14.21 14.22 14.23 14.24 14.25 14.26 14.27 14.28 14.51
+VC_VERSIONS_1 = 14.20 14.21 14.22 14.23 14.24 14.25 14.26 14.27 14.28 14.51 \
+  14.52
 VC_VERSIONS_2 = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
   14.37 14.38 14.39 14.40 14.41 14.42 14.43 14.44 14.50
 
 # List of VS version groups having the same Build Tools package version
-VS_VERSION_GROUPS = 18.0-18.5
+VS_VERSION_GROUPS = 18.0-18.5 18.6-18.11
 # List of preview VS versions
-VS_PREVIEW_VERSIONS = 18.6
+VS_PREVIEW_VERSIONS = 18.12
 
 # List of SDK versions
 VS15_SDK_VERSIONS = 19041
@@ -252,6 +256,14 @@ ifdef lang
 else
  ifdef LANG
   DL_LANG := $(subst _,-,$(firstword $(subst ., ,$(LANG))))
+ endif
+endif
+
+ifdef DL_LANG
+ override undefine lang_code
+ lang_code := $(firstword $(subst -, ,$(DL_LANG)))
+ ifeq (,$(filter zh,$(lang_code)))
+  DL_LANG := $(lang_code)
  endif
 endif
 
