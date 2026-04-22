@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #
-# MSVC-Libs 1.5
+# MSVC-Libs 1.7
 #
 # make_msvc-libs.sh
 #
@@ -130,6 +130,19 @@ fi
 echo "This script creates a repackaged standalone MSVC/SDK library from the"
 echo "Visual Studio library."
 echo
+
+crt_version=$(get_crt_version)
+if [ $? != 0 ]; then crt_version=${VCToolsInstallDir##*/}; fi
+
+sdk_ver_bin="$WindowsSdkDir/bin/$WindowsSDKVersion/x64/certmgr.exe"
+sdk_version=$({ strings -del "$sdk_ver_bin" | grep -A1 'ProductVersion' | \
+    tail -n 1; } 2>/dev/null)
+if [ -z "$sdk_version" ]; then sdk_version=$WindowsSDKVersion; fi
+
+echo "MSVC: $crt_version"
+echo "SDK:  $sdk_version"
+
+echo
 echo "The directory \"$msvc_dirname\" will be created in:"
 echo "$script_dir"
 
@@ -213,14 +226,6 @@ do
 		fi
 	fi
 done 3<"$script_dir/$config_file"
-
-crt_version=$(get_crt_version)
-if [ $? != 0 ]; then crt_version=${VCToolsInstallDir##*/}; fi
-
-sdk_ver_bin="$WindowsSdkDir/bin/$WindowsSDKVersion/x64/certmgr.exe"
-sdk_version=$({ strings -del "$sdk_ver_bin" | grep -A1 'ProductVersion' | \
-    tail -n 1; } 2>/dev/null)
-if [ -z "$sdk_version" ]; then sdk_version=$WindowsSDKVersion; fi
 
 {
 	echo CRT $crt_version

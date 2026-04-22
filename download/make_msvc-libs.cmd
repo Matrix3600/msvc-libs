@@ -1,7 +1,7 @@
 <# :: Do not remove
 @echo off
 ::
-:: MSVC-Libs 1.5
+:: MSVC-Libs 1.7
 ::
 :: make_msvc-libs.cmd
 ::
@@ -145,6 +145,21 @@ if exist "%msvc_dirpath%" (
 
 echo This script creates a repackaged standalone MSVC/SDK library from the
 echo Visual Studio library.
+
+echo(
+set "crt_version="
+for /f "delims=" %%D in ("%VCToolsInstallDir%") do set "crt_version=%%~nxD"
+call :get_crt_version crt_version
+
+set "sdk_version=%WindowsSDKVersion%"
+set "p=(Get-Item -LiteralPath"
+set "p=%p% \"%WindowsSdkDir%\bin\%WindowsSDKVersion%\x64\certmgr.exe\")"
+set "p=%p%.VersionInfo.ProductVersion"
+for /f %%i in ('%pwsh_exec% -c "%p%" 2^>nul') do set "sdk_version=%%i"
+
+echo MSVC: %crt_version%
+echo SDK:  %sdk_version%
+
 echo(
 echo The directory "%msvc_dirname%" will be created in:
 echo %script_dir%
@@ -218,16 +233,6 @@ for /f "tokens=1-3 usebackq eol=# delims=|" %%i in (
 			goto error_copy
 	)
 )
-
-set "crt_version="
-for /f "delims=" %%D in ("%VCToolsInstallDir%") do set "crt_version=%%~nxD"
-call :get_crt_version crt_version
-
-set "sdk_version=%WindowsSDKVersion%"
-set "p=(Get-Item -LiteralPath"
-set "p=%p% \"%WindowsSdkDir%\bin\%WindowsSDKVersion%\x64\certmgr.exe\")"
-set "p=%p%.VersionInfo.ProductVersion"
-for /f %%i in ('%pwsh_exec% -c "%p%" 2^>nul') do set "sdk_version=%%i"
 
 (
 	echo CRT %crt_version%
