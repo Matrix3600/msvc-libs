@@ -66,8 +66,9 @@ Parameters to choose which packages to download:
                 latest unversioned MSVC packages are selected for this version.
                 If a full version is specified (e.g., 17.5), the corresponding
                 versioned MSVC packages are selected.
-  sdkver=xxxxx  SDK version (19041,22621,26100)
-                (default: 26100 (VS 17/18), 22621 (VS 16) or 19041 (VS 15)).
+  sdkver=xxxxx  SDK version (19041,22621,26100,28000)
+                (default: 28000 (VS 18), 26100 (VS 17), 22621 (VS 16) or
+                19041 (VS 15)).
   preview       Download preview versions instead of release versions.
   lang=xx[-YY]  Preferred language code for packages available in multiple
                 languages (default: LANG environment variable, or "en")
@@ -134,7 +135,7 @@ VS_VERSION_GROUPS = 18.0-18.5 18.6-18.11
 VS15_SDK_VERSIONS = 19041
 VS16_SDK_VERSIONS = 19041 22621
 VS17_SDK_VERSIONS = 19041 22621 26100
-VS18_SDK_VERSIONS = 22621 26100
+VS18_SDK_VERSIONS = 22621 26100 28000
 
 # -----------------------------------------------------------------------------
 # Detect system and check required files
@@ -375,7 +376,11 @@ ifdef sdkver
  SDK_VERSION := $(sdkver)
  override undefine sdkver
 else
- SDK_VERSION := $(lastword $(VS$(VS_MAJOR_VERSION)_SDK_VERSIONS))
+ ifdef VS$(VS_MAJOR_VERSION)_DEFAULT_SDK_VERSION
+  SDK_VERSION := $(VS$(VS_MAJOR_VERSION)_DEFAULT_SDK_VERSION)
+ else
+  SDK_VERSION := $(lastword $(VS$(VS_MAJOR_VERSION)_SDK_VERSIONS))
+ endif
 endif
 
 # -----------------------------------------------------------------------------
