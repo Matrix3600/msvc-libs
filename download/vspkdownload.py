@@ -25,6 +25,7 @@
 # 2026-03-05: Add new versions in setPackageSelection function.
 # 2026-03-06: Remove redundant "Microsoft.VC.<version>.ASAN.X86" package already
 #             included in "Microsoft.VisualStudio.Component.VC.<version>.x86.x64".
+# 2026-05-27: Remove setPackageSelection and unpackWin10WDK functions.
 
 import argparse
 import functools
@@ -70,15 +71,15 @@ def getArgsParser():
         def __call__(self, parser, namespace, values, option_string=None):
             setattr(namespace, self.dest, values != "no")
 
-    parser = argparse.ArgumentParser(description = "Download and install Visual Studio")
+    parser = argparse.ArgumentParser(description = "Download and install Visual Studio packages")
     parser.add_argument("--manifest", metavar="manifest", help="A predownloaded manifest file")
     parser.add_argument("--save-manifest", const=True, action="store_const", help="Store the downloaded manifest to a file")
     parser.add_argument("--major", default=18, type=int, metavar="version", help="The major version to download (defaults to 18)")
     parser.add_argument("--preview", const=True, action="store_const", help="Download the preview version instead of the release version")
     parser.add_argument("--cache", metavar="dir", help="Directory to use as a persistent cache for downloaded files")
     parser.add_argument("--dest", metavar="dir", help="Directory to install into")
-    parser.add_argument("package", metavar="package", help="Package to install. If omitted, installs the default command line tools.", nargs="*")
-    parser.add_argument("--ignore", metavar="component", help="Package to skip", action="append")
+    parser.add_argument("package", metavar="package", help="Package to install", nargs="*")
+    parser.add_argument("--ignore", metavar="component", help="Package to skip", default=[], action="append")
     parser.add_argument("--accept-license", const=True, action="store_const", help="Don't prompt for accepting the license")
     parser.add_argument("--print-version", const=True, action="store_const", help="Stop after fetching the manifest")
     parser.add_argument("--list-workloads", const=True, action="store_const", help="List high level workloads")
@@ -92,196 +93,17 @@ def getArgsParser():
     parser.add_argument("--only-download", const=True, action="store_const", help="Stop after downloading package files")
     parser.add_argument("--only-unpack", const=True, action="store_const", help="Unpack the selected packages and keep all files, in the layout they are unpacked, don't restructure and prune files other than what's needed for MSVC CLI tools")
     parser.add_argument("--keep-unpack", const=True, action="store_const", help="Keep the unpacked files that aren't otherwise selected as needed output")
-    parser.add_argument("--msvc-version", metavar="version", help="Install a specific MSVC toolchain version")
-    parser.add_argument("--sdk-version", metavar="version", help="Install a specific Windows SDK version")
     parser.add_argument("--architecture", metavar="arch", choices=["host", "x86", "x64", "arm", "arm64"], help="Target architectures to include (defaults to all)", nargs="+")
-    parser.add_argument("--with-wdk-installers", metavar="dir", help="Install Windows Driver Kit using the provided MSI installers")
     parser.add_argument("--host-arch", metavar="arch", choices=["x86", "x64", "arm64"], help="Specify the host architecture of packages to install")
     parser.add_argument("--only-host", default=True, action=OptionalBoolean, help="Only download packages that match host arch")
     parser.add_argument("--language", metavar="xx[-YY]", default="en", help="Preferred language code for packages available in multiple languages (defaults to en)")
     return parser
 
-def setPackageSelectionMSVC16(args, packages, userversion, sdk, toolversion, defaultPackages):
-    ext = ".Tools" if toolversion == "Preview" else ""
-    if findPackage(packages, "Microsoft.VisualStudio.Component.VC." + toolversion + ext + ".x86.x64", warn=False):
-        if "x86" in args.architecture or "x64" in args.architecture:
-            args.package.append("Microsoft.VisualStudio.Component.VC." + toolversion + ext + ".x86.x64")
-            args.package.append("Microsoft.VisualStudio.Component.VC." + toolversion + ".ATL")
-        if "arm" in args.architecture:
-            args.package.append("Microsoft.VisualStudio.Component.VC." + toolversion + ".ARM")
-            args.package.append("Microsoft.VisualStudio.Component.VC." + toolversion + ".ATL.ARM")
-        if "arm64" in args.architecture:
-            args.package.append("Microsoft.VisualStudio.Component.VC." + toolversion + ".ARM64")
-            args.package.append("Microsoft.VisualStudio.Component.VC." + toolversion + ".ATL.ARM64")
-
-        if args.sdk_version == None:
-            args.sdk_version = sdk
-    else:
-        # Options for toolchains for specific versions. The latest version in
-        # each manifest isn't available as a pinned version though, so if that
-        # version is requested, try the default version.
-        print("Didn't find exact version packages for " + userversion + ", assuming this is provided by the default/latest version")
-        args.package.extend(defaultPackages)
-
-def setPackageSelectionMSVC15(args, packages, userversion, sdk, toolversion, defaultPackages):
-    if findPackage(packages, "Microsoft.VisualStudio.Component.VC.Tools." + toolversion, warn=False):
-        args.package.extend(["Win10SDK_" + sdk, "Microsoft.VisualStudio.Component.VC.Tools." + toolversion])
-    else:
-        # Options for toolchains for specific versions. The latest version in
-        # each manifest isn't available as a pinned version though, so if that
-        # version is requested, try the default version.
-        print("Didn't find exact version packages for " + userversion + ", assuming this is provided by the default/latest version")
-        args.package.extend(defaultPackages)
-
-def setPackageSelection(args, packages):
-    if not args.architecture:
-        if args.major < 18:
-            args.architecture = ["host", "x86", "x64", "arm", "arm64"]
-        else:
-            args.architecture = ["host", "x86", "x64", "arm64"]
-    if args.host_arch is not None and "host" in args.architecture:
-        args.architecture.append(args.host_arch)
-
-    # If no packages are selected, install these versionless packages, which
-    # gives the latest/recommended version for the current manifest.
-    defaultPackages = ["Microsoft.VisualStudio.Workload.VCTools"]
-    if "x86" in args.architecture or "x64" in args.architecture:
-        defaultPackages.append("Microsoft.VisualStudio.Component.VC.ATL")
-    if "arm" in args.architecture:
-        defaultPackages.append("Microsoft.VisualStudio.Component.VC.Tools.ARM")
-        defaultPackages.append("Microsoft.VisualStudio.Component.VC.ATL.ARM")
-    if "arm64" in args.architecture:
-        defaultPackages.append("Microsoft.VisualStudio.Component.VC.Tools.ARM64")
-        defaultPackages.append("Microsoft.VisualStudio.Component.VC.ATL.ARM64")
-
-    # Note, that in the manifest for MSVC version X.Y, only version X.Y-1
-    # exists with a package name like "Microsoft.VisualStudio.Component.VC."
-    # + toolversion + ".x86.x64".
-    if args.msvc_version == "preview":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, None, "Preview", defaultPackages)
-    elif args.msvc_version == "16.0":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.17763", "14.20", defaultPackages)
-    elif args.msvc_version == "16.1":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.18362", "14.21", defaultPackages)
-    elif args.msvc_version == "16.2":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.18362", "14.22", defaultPackages)
-    elif args.msvc_version == "16.3":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.18362", "14.23", defaultPackages)
-    elif args.msvc_version == "16.4":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.18362", "14.24", defaultPackages)
-    elif args.msvc_version == "16.5":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.18362", "14.25", defaultPackages)
-    elif args.msvc_version == "16.6":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.18362", "14.26", defaultPackages)
-    elif args.msvc_version == "16.7":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.18362", "14.27", defaultPackages)
-    elif args.msvc_version == "16.8":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.18362", "14.28", defaultPackages)
-    elif args.msvc_version == "16.9":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.19041", "14.28.16.9", defaultPackages)
-    elif args.msvc_version == "16.10":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.19041", "14.29.16.10", defaultPackages)
-    elif args.msvc_version == "16.11":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.19041", "14.29.16.11", defaultPackages)
-    elif args.msvc_version == "17.0":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.19041", "14.30.17.0", defaultPackages)
-    elif args.msvc_version == "17.1":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.19041", "14.31.17.1", defaultPackages)
-    elif args.msvc_version == "17.2":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.19041", "14.32.17.2", defaultPackages)
-    elif args.msvc_version == "17.3":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.19041", "14.33.17.3", defaultPackages)
-    elif args.msvc_version == "17.4":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.34.17.4", defaultPackages)
-    elif args.msvc_version == "17.5":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.35.17.5", defaultPackages)
-    elif args.msvc_version == "17.6":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.36.17.6", defaultPackages)
-    elif args.msvc_version == "17.7":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.37.17.7", defaultPackages)
-    elif args.msvc_version == "17.8":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.38.17.8", defaultPackages)
-    elif args.msvc_version == "17.9":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.39.17.9", defaultPackages)
-    elif args.msvc_version == "17.10":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.40.17.10", defaultPackages)
-    elif args.msvc_version == "17.11":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.41.17.11", defaultPackages)
-    elif args.msvc_version == "17.12":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.42.17.12", defaultPackages)
-    elif args.msvc_version == "17.13":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.22621", "14.43.17.13", defaultPackages)
-    elif args.msvc_version == "17.14":
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.44.17.14", defaultPackages)
-    elif args.msvc_version in ["18.0", "18.1", "18.2", "18.3", "18.4", "18.5"]:
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.26100", "14.50.18.0", defaultPackages)
-    elif args.msvc_version in ["18.6", "18.7", "18.8", "18.9", "18.10", "18.11"]:
-        setPackageSelectionMSVC16(args, packages, args.msvc_version, "10.0.28000", "14.51", defaultPackages)
-
-    elif args.msvc_version == "15.4":
-        setPackageSelectionMSVC15(args, packages, args.msvc_version, "10.0.16299", "14.11", defaultPackages)
-    elif args.msvc_version == "15.5":
-        setPackageSelectionMSVC15(args, packages, args.msvc_version, "10.0.16299", "14.12", defaultPackages)
-    elif args.msvc_version == "15.6":
-        setPackageSelectionMSVC15(args, packages, args.msvc_version, "10.0.16299", "14.13", defaultPackages)
-    elif args.msvc_version == "15.7":
-        setPackageSelectionMSVC15(args, packages, args.msvc_version, "10.0.17134", "14.14", defaultPackages)
-    elif args.msvc_version == "15.8":
-        setPackageSelectionMSVC15(args, packages, args.msvc_version, "10.0.17134", "14.15", defaultPackages)
-    elif args.msvc_version == "15.9":
-        setPackageSelectionMSVC15(args, packages, args.msvc_version, "10.0.17763", "14.16", defaultPackages)
-    elif args.msvc_version != None:
-        print("Unsupported MSVC toolchain version " + args.msvc_version)
-        sys.exit(1)
-
-    if len(args.package) == 0:
-        args.package = defaultPackages
-
-    if args.msvc_version == "preview" and args.sdk_version is None:
-        # Find which SDK the workload would include, even the whole workload might not be installd.
-        # Temporarily backup and overwrite args variables for a call to getSelectedPackages.
-        package = args.package
-        include_optional = args.include_optional
-        skip_recommended = args.skip_recommended
-
-        args.package = ["Microsoft.VisualStudio.Workload.VCTools"]
-        args.include_optional = False
-        args.skip_recommended = False
-
-        recommended = getSelectedPackages(packages, args)
-
-        args.package = package
-        args.include_optional = include_optional
-        args.skip_recommended = skip_recommended
-
-        for p in recommended:
-            key = p["id"].lower()
-            if key.startswith("win10sdk") or key.startswith("win11sdk"):
-                args.package.append(key)
-    elif args.sdk_version is not None:
-        found = False
-        versions = []
-        for key in packages:
-            if key.startswith("win10sdk") or key.startswith("win11sdk"):
-                base = key[0:8]
-                version = key[9:]
-                if re.match(r'\d+\.\d+\.\d+', version):
-                    versions += [version]
-                sdkname = base + "_" + args.sdk_version
-                if key == sdkname:
-                    found = True
-                    args.package.append(key)
-                else:
-                    args.ignore.append(key)
-        if not found:
-            print("WinSDK version " + args.sdk_version + " not found")
-            print("Available versions:")
-            for v in sorted(versions):
-                print("    " + v)
-            sys.exit(1)
-
-    if args.with_wdk_installers is not None:
-        args.package.append("Component.Microsoft.Windows.DriverKit.BuildTools")
+def appendPackageSelection(args, flag, package):
+    if flag == True:
+        args.package.append(package)
+    elif flag == False:
+        args.ignore.append(package)
 
 def lowercaseIgnores(args):
     ignore = []
@@ -750,51 +572,6 @@ def unpackWin10SDK(src, payloads, dest):
             with open(os.path.join(dest, "WinSDK-" + getPayloadName(payload) + "-listing.txt"), "w") as log:
                 subprocess.check_call(cmd, stdout=log)
 
-def unpackWin10WDK(src, dest):
-    print("Unpacking WDK installers from", src)
-
-    # WDK installers downloaded by wdksetup.exe include a huge pile of
-    # non-WDK installers, just skip these.
-    for srcfile in glob.glob(src + "/Windows Driver*.msi"):
-        name = os.path.basename(srcfile)
-        print("Extracting", name)
-
-        # Do not try to run msiexec here because TARGETDIR
-        # does not work with WDK installers.
-        cmd = ["msiextract", "-C", dest, srcfile]
-
-        payloadName, _ = os.path.splitext(name)
-        with open(os.path.join(dest, "WDK-" + payloadName + "-listing.txt"), "w") as log:
-            subprocess.check_call(cmd, stdout=log)
-
-    # WDK includes a VS extension, unpack it before copying the extracted files.
-    for vsix in glob.glob(dest + "/**/WDK.vsix", recursive=True):
-        name = os.path.basename(vsix)
-        print("Unpacking WDK VS extension", name)
-
-        payloadName, _ = os.path.splitext(name)
-        listing = os.path.join(dest, "WDK-VS-" + payloadName + "-listing.txt")
-        unpackVsix(vsix, dest, listing)
-
-    # Merge incorrectly extracted 'Build' and 'build' directory trees.
-    # The WDK 'build' tree must be versioned.
-    kitsPath = os.path.join(dest, "Program Files", "Windows Kits", "10")
-    brokenBuildDir = os.path.join(kitsPath, "Build")
-    for buildDir in glob.glob(kitsPath + "/build/10.*/"):
-        wdkVersion = buildDir.split("/")[-2];
-        print("Merging WDK 'Build' and 'build' directories into version", wdkVersion);
-        mergeTrees(brokenBuildDir, buildDir)
-    shutil.rmtree(brokenBuildDir)
-
-    # Move the WDK .props files into a versioned directory.
-    propsPath = os.path.join(kitsPath, "DesignTime", "CommonConfiguration", "Neutral", "WDK");
-    versionedPath = os.path.join(propsPath, wdkVersion)
-    makedirs(versionedPath)
-    for props in glob.glob(propsPath + "/*.props"):
-        filename = os.path.basename(props)
-        print("Moving", filename, "into version", wdkVersion);
-        shutil.move(props, os.path.join(versionedPath, filename))
-
 def extractPackages(selected, cache, dest):
     makedirs(dest)
     # The path name casing is not consistent across packages, or even within a single package.
@@ -833,7 +610,6 @@ def moveVCSDK(unpack, dest):
 if __name__ == "__main__":
     parser = getArgsParser()
     args = parser.parse_args()
-    lowercaseIgnores(args)
 
     socket.setdefaulttimeout(15)
 
@@ -873,8 +649,6 @@ if __name__ == "__main__":
         if response == "no":
             sys.exit(0)
 
-    setPackageSelection(args, packages)
-
     if args.list_components or args.list_workloads or args.list_packages:
         if args.list_components:
             listPackageType(packages, "Component")
@@ -883,6 +657,8 @@ if __name__ == "__main__":
         if args.list_packages:
             listPackageType(packages, None)
         sys.exit(0)
+
+    lowercaseIgnores(args)
 
     if args.print_deps_tree:
         for i in args.package:
@@ -928,9 +704,6 @@ if __name__ == "__main__":
             unpack = os.path.join(dest, "unpack")
 
         extractPackages(selected, cache, unpack)
-
-        if args.with_wdk_installers is not None:
-            unpackWin10WDK(args.with_wdk_installers, unpack)
 
         if not args.only_unpack:
             moveVCSDK(unpack, dest)

@@ -23,8 +23,9 @@
 #
 # Compatible with Windows and Linux for cross-compilation.
 #
-# - Download the Visual Studio library using the "vsdownload.py" script created
-#   by Martin Storsjo (https://github.com/mstorsjo/msvc-wine).
+# - Download the Visual Studio library using a modified version of the
+#   "vsdownload.py" script created by Martin Storsjo
+#   (https://github.com/mstorsjo/msvc-wine).
 #
 #   The original files are downloaded from the Microsoft servers. You need to
 #   accept the license https://go.microsoft.com/fwlink/?LinkId=2327714 .
@@ -217,7 +218,7 @@ ifdef NATIVEWIN
  endif
 endif
 
-VSDOWNLOAD_SCRIPT = vsdownload.py
+VSDOWNLOAD_SCRIPT = vspkdownload.py
 ifdef NATIVEWIN
  MSVC_LIBS_SCRIPT = make_msvc-libs.cmd
 else
@@ -684,7 +685,7 @@ define DOWNLOAD_RULE
 $$($(1)): ; $$(CHECK_VERSION)
 ifndef NO_DL
 	$$(info )$$(info *** Downloading $(2) ...)$$(info )
-	$$(PYTHON) vsdownload.py $$(DOWNLOAD_OPTIONS) \
+	$$(PYTHON) vspkdownload.py $$(DOWNLOAD_OPTIONS) \
 		"Microsoft.VisualStudio.Component.$(2)" --dest .
 else
 	$$(error Package needed: $(2))
