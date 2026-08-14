@@ -41,6 +41,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import urllib.parse
 import urllib.request
 import zipfile
 
@@ -484,6 +485,7 @@ def _downloadPayload(payload, destname, fileid, allowHashMismatch):
             if "size" in payload:
                 size = payload["size"]
             print("Downloading %s (%s)" % (fileid, formatSize(size)), flush=True)
+            payload["url"] = urllib.parse.quote(payload["url"], ":/%")
             urllib.request.urlretrieve(payload["url"], destname)
             if "sha256" in payload:
                 if sha256File(destname).lower() != payload["sha256"].lower():
