@@ -130,10 +130,10 @@ Go to <https://github.com/llvm/llvm-project/releases> and download the latest
 file that matches your __development__ system's architecture, for example:  
 
 - Windows Intel/AMD 64-bit  
-`LLVM-<version>-win64.exe`
+`LLVM-<version>-win64.msi`
 
 - Windows on Arm64  
-`LLVM-<version>-woa64.exe` (maybe not the latest version)
+`LLVM-<version>-woa64.msi`
 
 - Linux Intel/AMD 64-bit   
 `LLVM-<version>-Linux-X64.tar.xz`
