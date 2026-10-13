@@ -1,5 +1,5 @@
 #
-# MSVC-Libs 1.8
+# MSVC-Libs 1.9
 #
 # Makefile (version for GNU make, Windows or Linux)
 #
