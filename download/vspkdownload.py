@@ -22,10 +22,10 @@
 # 2026-02-02: Remove "arm" from default architectures for VS >= 18.
 # 2026-03-01: Exit with an error if one of the specified packages does not
 #             exist.
-# 2026-03-05: Add new versions in setPackageSelection function.
 # 2026-03-06: Remove redundant "Microsoft.VC.<version>.ASAN.X86" package already
 #             included in "Microsoft.VisualStudio.Component.VC.<version>.x86.x64".
 # 2026-05-27: Remove setPackageSelection and unpackWin10WDK functions.
+#             Rename the script vsdownload.py to vspkdownload.py.
 
 import argparse
 import functools
@@ -41,7 +41,6 @@ import socket
 import subprocess
 import sys
 import tempfile
-import urllib.parse
 import urllib.request
 import zipfile
 
@@ -485,7 +484,6 @@ def _downloadPayload(payload, destname, fileid, allowHashMismatch):
             if "size" in payload:
                 size = payload["size"]
             print("Downloading %s (%s)" % (fileid, formatSize(size)), flush=True)
-            payload["url"] = urllib.parse.quote(payload["url"], ":/%")
             urllib.request.urlretrieve(payload["url"], destname)
             if "sha256" in payload:
                 if sha256File(destname).lower() != payload["sha256"].lower():

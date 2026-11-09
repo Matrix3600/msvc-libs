@@ -372,7 +372,7 @@ get_crt_version() {
 	done <"$f"
 
 	if [ -n "$major" ] && [ -n "$minor" ] && [ -n "$build" ]; then
-		printf '%s' "$major.$minor.$build"
+		printf '%s\n' "$major.$minor.$build"
 		return 0
 	fi
 	return 1
@@ -435,7 +435,7 @@ trim() {
 	var="${var#"${var%%[![:space:]]*}"}"
 	# Remove trailing whitespace characters
 	var="${var%"${var##*[![:space:]]}"}"
-	printf '%s' "$var"
+	printf '%s\n' "$var"
 }
 
 
