@@ -62,13 +62,13 @@ Parameters to choose which packages to download:
   sdk           [Windows<winver>SDK.<sdkver>]
                 See below for values of <sdkver>.
 
-  vsver=x[.y]   Visual Studio version (15, 16.0 to 19.5) (default: 18).
-                If only the major version is specified (e.g., 17), the
+  vsver=x[.y]   Visual Studio version (15, 16.0 to 18.17) (default: 18).
+                If only the major version is specified (e.g., 18), the
                 latest unversioned MSVC packages are selected for this version.
-                If a full version is specified (e.g., 17.5), the corresponding
+                If a full version is specified (e.g., 18.5), the corresponding
                 versioned MSVC packages are selected.
   sdkver=xxxxx  SDK version (19041, 22621, 26100, 28000)
-                (default: 28000 (VS 18/19), 26100 (VS 17), 22621 (VS 16) or
+                (default: 28000 (VS 18), 26100 (VS 17), 22621 (VS 16) or
                 19041 (VS 15)).
   preview       Download preview versions instead of release versions.
   lang=xx[-YY]  Preferred language code for packages available in multiple
@@ -118,12 +118,11 @@ endef
 
 # Minimum and maximum major versions of Visual Studio supported
 VS_MIN_MAJOR_VERSION = 15
-VS_MAX_MAJOR_VERSION = 19
-VS_DEFAULT_MAJOR_VERSION = 18
+VS_MAX_MAJOR_VERSION = 18
 
 # List of Visual Studio versions
 VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8  18.6 \
-  19.0
+  18.12
 VS_VERSIONS_2 = 16.9  16.10 16.11 17.0  17.1  17.2  17.3  17.4  17.5  17.6 \
   17.7  17.8  17.9  17.10 17.11 17.12 17.13 17.14 18.0
 # List of corresponding MSVC Build Tools versions
@@ -133,14 +132,13 @@ VC_VERSIONS_2 = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
   14.37 14.38 14.39 14.40 14.41 14.42 14.43 14.44 14.50
 
 # List of VS version groups having the same Build Tools package version
-VS_VERSION_GROUPS = 18.0-18.5 18.6-18.11 19.0-19.5
+VS_VERSION_GROUPS = 18.0-18.5 18.6-18.11 18.12-18.17
 
 # List of SDK versions
 VS15_SDK_VERSIONS = 19041
 VS16_SDK_VERSIONS = 19041 22621
 VS17_SDK_VERSIONS = 19041 22621 26100
 VS18_SDK_VERSIONS = 22621 26100 28000
-VS19_SDK_VERSIONS = 26100 28000
 
 # -----------------------------------------------------------------------------
 # Detect system and check required files
@@ -331,9 +329,7 @@ ifdef vsver
   ifeq (16.11,$(vsver))
    VS_MAJOR_VERSION = 17
   else
-   ifeq (,$(and $(filter $(VS_MAX_MAJOR_VERSION).0,$(vsver)),$(PREVIEW)))
-     VS_MAJOR_VERSION := $(firstword $(vs_ver_list))
-   endif
+   VS_MAJOR_VERSION := $(firstword $(vs_ver_list))
   endif
 
   override undefine base_vsver
