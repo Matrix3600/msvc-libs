@@ -62,7 +62,7 @@ Parameters to choose which packages to download:
   sdk           [Windows<winver>SDK.<sdkver>]
                 See below for values of <sdkver>.
 
-  vsver=x[.y]   Visual Studio version (15, 16.0 to 18.17) (default: 18).
+  vsver=x[.y]   Visual Studio version (15, 16.0 to 18.24) (default: 18).
                 If only the major version is specified (e.g., 18), the
                 latest unversioned MSVC packages are selected for this version.
                 If a full version is specified (e.g., 18.5), the corresponding
@@ -122,17 +122,17 @@ VS_MAX_MAJOR_VERSION = 18
 
 # List of Visual Studio versions
 VS_VERSIONS_1 = 16.0  16.1  16.2  16.3  16.4  16.5  16.6  16.7  16.8  18.6 \
-  18.12
+  18.12 18.18 18.24
 VS_VERSIONS_2 = 16.9  16.10 16.11 17.0  17.1  17.2  17.3  17.4  17.5  17.6 \
   17.7  17.8  17.9  17.10 17.11 17.12 17.13 17.14 18.0
 # List of corresponding MSVC Build Tools versions
 VC_VERSIONS_1 = 14.20 14.21 14.22 14.23 14.24 14.25 14.26 14.27 14.28 14.51 \
-  14.52
+  14.52 14.53 14.54
 VC_VERSIONS_2 = 14.28 14.29 14.29 14.30 14.31 14.32 14.33 14.34 14.35 14.36 \
   14.37 14.38 14.39 14.40 14.41 14.42 14.43 14.44 14.50
 
 # List of VS version groups having the same Build Tools package version
-VS_VERSION_GROUPS = 18.0-18.5 18.6-18.11 18.12-18.17
+VS_VERSION_GROUPS = 18.0-18.5 18.6-18.11 18.12-18.17 18.18-18.23
 
 # List of SDK versions
 VS15_SDK_VERSIONS = 19041
@@ -279,15 +279,22 @@ COMPARE_VERSIONS_GTE = $(filter-out -1,$\
   $(call _cmp_ver,$(subst ., ,$1),$(subst ., ,$2)))
 
 # VSVER_TO_VSVER_GROUP: Search for VS version group from VS version
-override undefine _group
-override undefine _get_group
-_group = $(if $3,$(if $(and $\
-    $(call COMPARE_VERSIONS_GTE,$1,$2),$(call COMPARE_VERSIONS_GTE,$3,$1)),$\
-    $2),$\
-  $(filter $1,$2))
-_get_group = $(call _group,$1,$(firstword $2),$(word 2,$2))
+override undefine _version_in_interval
+override undefine _find_version_in_interval
+override undefine _find_group
+_version_in_interval = $(if $3,$(if $(and $\
+      $(call COMPARE_VERSIONS_GTE,$1,$2),$\
+      $(call COMPARE_VERSIONS_GTE,$3,$1)),$\
+    $(or $4,$2)),$\
+  $(if $(filter $1,$2),$(or $4,$2)))
+_find_version_in_interval = $\
+  $(call _version_in_interval,$1,$(firstword $2),$(word 2,$2),$3)
+_find_group = $(if $2,$(or $\
+  $(call _find_version_in_interval,$1,$(subst -, ,$(firstword $2)),$3),$\
+  $(call _find_group,$1,$(wordlist 2,$(words $2),$2),$\
+    $(or $3,$(firstword $(subst -, ,$(firstword $2)))))))
 VSVER_TO_VSVER_GROUP = $(if $2,$(or $\
-  $(call _get_group,$1,$(subst -, ,$(firstword $2))),$\
+  $(call _find_group,$1,$(subst ;, ,$(firstword $2))),$\
   $(call VSVER_TO_VSVER_GROUP,$1,$(wordlist 2,$(words $2),$2))))
 
 # VSVER_TO_VCVER: Convert Visual Studio version to MSVC Build Tools version
