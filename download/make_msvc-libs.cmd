@@ -1,12 +1,12 @@
 <# :: Do not remove
 @echo off
 ::
-:: MSVC-Libs 1.7
+:: MSVC-Libs 2.0
 ::
 :: make_msvc-libs.cmd
 ::
 :: ----------------------------------------------------------------------------
-:: Copyright 2025-2026 https://github.com/Matrix3600
+:: Copyright 2025-2027 https://github.com/Matrix3600
 ::
 :: Licensed under the Apache License, Version 2.0 (the "License");
 :: you may not use this file except in compliance with the License.
